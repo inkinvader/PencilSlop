@@ -1,0 +1,35 @@
+commit 275d85ad81312d32dd415bbeaae2ffab066965d8
+Date:   2026-11-06 18:04:34 -0600
+Author: Niko Kahler
+
+Save Phase 1 transcript
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit b6ba9d792d91512bcb6c02235fd2c7fb957bb205
+Date:   2026-11-06 18:02:31 -0600
+Author: Niko Kahler
+
+Phase 1: PENCILSLOP pitch and logo
+
+- pitch.md: ideation, chosen idea, branding (Kahoot-inspired, art-first
+  layout), and the full pitch: concept, goals, Cloudflare stack, MVP,
+  five-week map, stretch goals, risks
+- branding/logo.svg: pencil stabbed into a robot head, with wordmark
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit f5e5c34da18021bf986ecd2c7fe84318bf3c06ab
+Date:   2026-11-06 18:02:31 -0600
+Author: Niko Kahler
+
+Add Project 5 template documents
+
+Template files as provided. pitch.md is committed separately with the
+Phase 1 pitch content.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
