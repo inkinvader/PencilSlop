@@ -10,8 +10,8 @@
     {
       "binding": "DB",
       "database_name": "pencilslop",
-      // Placeholder for local dev; replaced with the real ID after `wrangler d1 create`.
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      // Identifies the database within the account; not a credential.
+      "database_id": "466ea874-fd90-42c6-8cea-446b0757f530"
     }
   ]
 }
