@@ -26,7 +26,7 @@ Phase 2:
 2. [x] D1 schema and seed catalog: 10 human (Art Institute of Chicago, CC0) and 10 AI (Wikimedia Commons), normalized to 640×640.
 3. [x] API: `/api/round` and `/api/answer`, tested with curl locally.
 4. [x] Game page: timer, streak, best, and reveal, tested in headless Edge on desktop and phone sizes.
-5. [ ] Developer reviews the seed images and rejects unsuitable ones.
+5. [x] Seed image review. The Developer delegated the choice; the Agent rejected 6 images, listed with reasons in `db/rejected.json`: 2 with DALL·E watermarks, 3 non-artworks (infographics, a photograph), and 1 framed photo that hints human. Replacements were fetched and checked by eye.
 6. [ ] Deploy: Cloudflare login, create the remote D1 database, load the schema and seed, `wrangler deploy`.
 7. [ ] Two-device test on the public URL, plus a network check in DevTools.
 
