@@ -23,7 +23,11 @@ When you begin this step, start a fresh chat so its transcript stays clean. For 
   - Each answer writes about 3 rows, so class-scale use is far inside the limits.
   - Not verified: whether R2 needs a payment method. This is one reason for skipping R2 in the MVP.
 - **Real art source**: the Art Institute of Chicago API. Public-domain artworks have CC0 images. The query excludes "boosted" highlights, but the results still include well-known works (Monet), which suits the easy tier.
-- **AI art source**: Wikimedia Commons AI categories. Category membership counts as the explicit AI confirmation. Only freely licensed files are used (public domain, CC0, CC BY, CC BY-SA). "AI-generated paintings" holds only 7 files, so the landscapes, portraits, and "in the style of specific artists" categories were added (about 97 files).
+- **AI art source**: Wikimedia Commons AI categories, freely licensed files only (public domain, CC0, CC BY, CC BY-SA). The categories are where the script looks, not proof.
+- **AI confirmation rule** (revised 2026-11-09 after the Developer couldn't confirm one image): the file page itself must name a generator (Midjourney, DALL·E, Stable Diffusion, ChatGPT, Bing Image Creator, and others) or carry the uploader's `{{PD-algorithm}}` license template, which declares the work machine-generated. The exact evidence is stored per image.
+  - The first rule accepted category membership alone. An audit found 4 of 10 AI images, all from one uploader, with no AI statement on the page. Anyone can edit categories, so membership isn't an explicit statement.
+  - `build_catalog.py --recheck-ai` applies the rule to existing entries; it rejected the same 4.
+  - "AI-generated images including prompts" (about 2,400 files) was added as a search category. It contains many non-artworks, so the manual visual review stays necessary.
 - **Finding (evidence)**: in the first build every AI image was square and no human image was. All images are now square-cropped.
 - **Finding (evidence)**: some Commons images carry a visible DALL·E watermark strip, or aren't artwork at all (an infographic, a landscape photograph). They need manual review.
 

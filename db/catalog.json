@@ -87,43 +87,7 @@
     "artist": "Midjourney AI, prompted by Netha Hussain",
     "source_url": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_in_watercolour.png",
     "license": "Public domain, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
-  },
-  {
-    "id": "08c67bfa64b82948",
-    "is_ai": true,
-    "title": "ایل زعفرانلو",
-    "artist": "1388Amir1388",
-    "source_url": "https://commons.wikimedia.org/wiki/File:%D8%A7%DB%8C%D9%84_%D8%B2%D8%B9%D9%81%D8%B1%D8%A7%D9%86%D9%84%D9%88.webp",
-    "license": "CC BY-SA 3.0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
-  },
-  {
-    "id": "5c3315bb458a33c7",
-    "is_ai": true,
-    "title": "تصویری منصوب به آقا خان (چناری)",
-    "artist": "1388Amir1388",
-    "source_url": "https://commons.wikimedia.org/wiki/File:%D8%AA%D8%B5%D9%88%DB%8C%D8%B1%DB%8C_%D9%85%D9%86%D8%B5%D9%88%D8%A8_%D8%A8%D9%87_%D8%A2%D9%82%D8%A7_%D8%AE%D8%A7%D9%86_(%DA%86%D9%86%D8%A7%D8%B1%DB%8C).png",
-    "license": "CC BY-SA 3.0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
-  },
-  {
-    "id": "84184b83c90606ca",
-    "is_ai": true,
-    "title": "تصویری منصوب به زندگی مردم در روستا چنار (گلبهار)",
-    "artist": "1388Amir1388",
-    "source_url": "https://commons.wikimedia.org/wiki/File:%D8%AA%D8%B5%D9%88%DB%8C%D8%B1%DB%8C_%D9%85%D9%86%D8%B5%D9%88%D8%A8_%D8%A8%D9%87_%D8%B2%D9%86%D8%AF%DA%AF%DB%8C_%D9%85%D8%B1%D8%AF%D9%85_%D8%AF%D8%B1_%D8%B1%D9%88%D8%B3%D8%AA%D8%A7_%DA%86%D9%86%D8%A7%D8%B1_(%DA%AF%D9%84%D8%A8%D9%87%D8%A7%D8%B1).webp",
-    "license": "CC BY-SA 3.0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
-  },
-  {
-    "id": "c6abc96bc28c7f6d",
-    "is_ai": true,
-    "title": "تصویری نشان دادن قدمت تاریخی روستای چنار",
-    "artist": "1388Amir1388",
-    "source_url": "https://commons.wikimedia.org/wiki/File:%D8%AA%D8%B5%D9%88%DB%8C%D8%B1%DB%8C_%D9%86%D8%B4%D8%A7%D9%86_%D8%AF%D8%A7%D8%AF%D9%86_%D9%82%D8%AF%D9%85%D8%AA_%D8%AA%D8%A7%D8%B1%DB%8C%D8%AE%DB%8C_%D8%B1%D9%88%D8%B3%D8%AA%D8%A7%DB%8C_%DA%86%D9%86%D8%A7%D8%B1.webp",
-    "license": "CC BY-SA 3.0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
+    "ai_evidence": "generator named on file page: Midjourney; uploader applied PD-algorithm (machine-generated) license"
   },
   {
     "id": "6f969a3fa123fa2d",
@@ -132,7 +96,7 @@
     "artist": "Murani compositor",
     "source_url": "https://commons.wikimedia.org/wiki/File:!%C2%BA_acto,_introducci%C3%B3n._%22Oh_luna_lucente%22.jpg",
     "license": "Public domain, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+    "ai_evidence": "uploader applied PD-algorithm (machine-generated) license"
   },
   {
     "id": "94b89dacfd573726",
@@ -150,7 +114,7 @@
     "artist": "Prototyperspective",
     "source_url": "https://commons.wikimedia.org/wiki/File:Android_making_a_conclusion_in_2740.png",
     "license": "CC0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+    "ai_evidence": "generator named on file page: Stable Diffusion"
   },
   {
     "id": "b5c082e0169016eb",
@@ -159,7 +123,7 @@
     "artist": "Apple Intelligence Image Playground",
     "source_url": "https://commons.wikimedia.org/wiki/File:AppleIntelligenceLandscape.jpg",
     "license": "Public domain, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+    "ai_evidence": "generator named on file page: Image Playground; uploader applied PD-algorithm (machine-generated) license"
   },
   {
     "id": "494827fb11734e47",
@@ -168,7 +132,7 @@
     "artist": "Bing Image Creator, בהנחיה של דון אקווילינו",
     "source_url": "https://commons.wikimedia.org/wiki/File:CavernOfGoldLyingDeepBeneathMountainLake.png",
     "license": "Public domain, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+    "ai_evidence": "generator named on file page: Bing Image Creator, Image Creator; uploader applied PD-algorithm (machine-generated) license"
   },
   {
     "id": "f9b7e674e2e0c729",
@@ -177,6 +141,42 @@
     "artist": "ChatGPT",
     "source_url": "https://commons.wikimedia.org/wiki/File:ChatGPT_image_of_a_moonlit_forest.jpg",
     "license": "Public domain, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+    "ai_evidence": "generator named on file page: ChatGPT; uploader applied PD-algorithm (machine-generated) license"
+  },
+  {
+    "id": "ab9cab376903f0dc",
+    "is_ai": true,
+    "title": "Dunes de Merzouga, l'erg chebbi (Sahara marocain)",
+    "artist": "ChatGPT",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Dunes_de_Merzouga,_l%27erg_chebbi_(Sahara_marocain).png",
+    "license": "CC0, via Wikimedia Commons",
+    "ai_evidence": "generator named on file page: ChatGPT"
+  },
+  {
+    "id": "89f8130bf20a4fa7",
+    "is_ai": true,
+    "title": "General information",
+    "artist": "copilot",
+    "source_url": "https://commons.wikimedia.org/wiki/File:General_information.jpg",
+    "license": "Public domain, via Wikimedia Commons",
+    "ai_evidence": "uploader applied PD-algorithm (machine-generated) license"
+  },
+  {
+    "id": "8c44faed09477f39",
+    "is_ai": true,
+    "title": "Illustration for wiki convention 04",
+    "artist": "Canva",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Illustration_for_wiki_convention_04.jpg",
+    "license": "Public domain, via Wikimedia Commons",
+    "ai_evidence": "uploader applied PD-algorithm (machine-generated) license"
+  },
+  {
+    "id": "b770a06501b37a15",
+    "is_ai": true,
+    "title": "Illustration for wiki convention 05",
+    "artist": "Canva",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Illustration_for_wiki_convention_05.jpg",
+    "license": "Public domain, via Wikimedia Commons",
+    "ai_evidence": "uploader applied PD-algorithm (machine-generated) license"
   }
 ]

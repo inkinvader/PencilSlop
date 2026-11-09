@@ -20,8 +20,12 @@ To reject an image: --reject ID REASON. It is removed from the catalog, its file
 is moved to scripts/raw/rejected/, and its source is recorded in db/rejected.json
 so it is never fetched again.
 
+AI images are accepted only with explicit evidence on their Commons file page
+(see ai_evidence). --recheck-ai applies that rule to existing entries.
+
 Usage: python scripts/build_catalog.py [--human N] [--ai N] [--seed-only]
        python scripts/build_catalog.py --reject ID REASON
+       python scripts/build_catalog.py --recheck-ai
 """
 
 import argparse
@@ -90,32 +94,64 @@ def human_candidates(limit):
         }
 
 
-# Commons categories whose files are artwork-like. Membership in one of these is
-# the AI confirmation recorded for each image.
+# Commons categories searched for artwork-like AI images. Category membership is
+# only where we look: anyone can edit categories, so it is not accepted as proof.
 AI_CATEGORIES = [
     "Category:AI-generated paintings",
     "Category:AI-generated landscapes",
     "Category:AI-generated portraits",
     "Category:AI-generated images in the style of specific artists",
+    "Category:AI-generated images including prompts",
 ]
+
+# Proof of AI origin must be on the file page itself: the uploader names the
+# generator, or applies Commons' PD-algorithm license template, which declares
+# the work machine-generated.
+AI_TOOLS = re.compile(
+    r"midjourney|dall[-·\s]?e|stable diffusion|sdxl|firefly|chatgpt|gpt-4o|bing image creator|"
+    r"image creator|leonardo\.ai|craiyon|imagen|flux\.1|image playground|copilot designer|ideogram",
+    re.I,
+)
+PD_ALGORITHM = re.compile(r"\{\{\s*PD-algorithm", re.I)
+
+
+def ai_evidence(wikitext):
+    """Return a description of the explicit AI evidence on a file page, or None."""
+    tools = sorted({m.group(0).strip() for m in AI_TOOLS.finditer(wikitext)}, key=str.lower)
+    parts = []
+    if tools:
+        parts.append("generator named on file page: " + ", ".join(tools))
+    if PD_ALGORITHM.search(wikitext):
+        parts.append("uploader applied PD-algorithm (machine-generated) license")
+    return "; ".join(parts) or None
+
+
+def commons_query(**params):
+    params = {"action": "query", "format": "json", **params}
+    return json.loads(http_get("https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode(params)))
+
+
+def wikitext_of(page):
+    return page.get("revisions", [{}])[0].get("slots", {}).get("main", {}).get("*", "")
 
 
 def ai_candidates(limit):
-    """Freely licensed files from the AI_CATEGORIES on Wikimedia Commons."""
+    """Freely licensed files with explicit AI evidence, from the AI_CATEGORIES on Wikimedia Commons."""
     for category in AI_CATEGORIES:
         yield from ai_candidates_in(category)
 
 
 def ai_candidates_in(category):
-    params = {
-        "action": "query", "format": "json",
-        "generator": "categorymembers", "gcmtitle": category,
-        "gcmtype": "file", "gcmlimit": "50",
-        "prop": "imageinfo", "iiprop": "url|mime|extmetadata", "iiurlwidth": "1000",
-    }
-    data = json.loads(http_get("https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode(params)))
+    data = commons_query(
+        generator="categorymembers", gcmtitle=category, gcmtype="file", gcmlimit="50",
+        prop="imageinfo|revisions", iiprop="url|mime|extmetadata", iiurlwidth="1000",
+        rvprop="content", rvslots="main",
+    )
     for page in data.get("query", {}).get("pages", {}).values():
         if "imageinfo" not in page:
+            continue
+        evidence = ai_evidence(wikitext_of(page))
+        if evidence is None:
             continue
         info = page["imageinfo"][0]
         meta = info.get("extmetadata", {})
@@ -129,7 +165,7 @@ def ai_candidates_in(category):
             "artist": strip_html(meta.get("Artist", {}).get("value")) or "Unknown prompter",
             "source_url": info["descriptionurl"],
             "license": f"{license_name}, via Wikimedia Commons",
-            "ai_evidence": f"Listed in Wikimedia Commons {category}",
+            "ai_evidence": evidence,
             "download_url": info.get("thumburl") or info["url"],
         }
 
@@ -152,6 +188,20 @@ def load_json(path):
 
 def save_json(path, data):
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def recheck_ai(catalog):
+    """Apply the current evidence rule to AI entries already in the catalog:
+    refresh the recorded evidence, and reject entries that no longer qualify."""
+    for entry in [e for e in catalog if e["is_ai"]]:
+        title = "File:" + urllib.parse.unquote(entry["source_url"].split("/File:")[1])
+        data = commons_query(titles=title, prop="revisions", rvprop="content", rvslots="main")
+        evidence = ai_evidence(wikitext_of(next(iter(data["query"]["pages"].values()))))
+        if evidence:
+            entry["ai_evidence"] = evidence
+            print(f"  ok {entry['id']}  {entry['title'][:50]}  [{evidence}]")
+        else:
+            reject(catalog, entry["id"], "No explicit AI statement on the file page (category only)")
 
 
 def reject(catalog, image_id, reason):
@@ -211,13 +261,17 @@ def main():
     ap.add_argument("--ai", type=int, default=10)
     ap.add_argument("--seed-only", action="store_true")
     ap.add_argument("--reject", nargs=2, metavar=("ID", "REASON"))
+    ap.add_argument("--recheck-ai", action="store_true", help="re-verify AI evidence of existing entries")
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # titles include non-Latin text
     IMG_DIR.mkdir(parents=True, exist_ok=True)
     catalog = load_json(CATALOG)
 
-    if args.reject:
+    if args.recheck_ai:
+        recheck_ai(catalog)
+        save_json(CATALOG, catalog)
+    elif args.reject:
         reject(catalog, *args.reject)
         save_json(CATALOG, catalog)
     elif not args.seed_only:
