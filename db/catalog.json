@@ -9,15 +9,6 @@
     "ai_evidence": null
   },
   {
-    "id": "c644025b5939eaf9",
-    "is_ai": false,
-    "title": "Interior of St. Mark's, Venice",
-    "artist": "David Dalhoff Neal",
-    "source_url": "https://www.artic.edu/artworks/9",
-    "license": "CC0 (public domain), Art Institute of Chicago",
-    "ai_evidence": null
-  },
-  {
     "id": "54a0f3cad1532275",
     "is_ai": false,
     "title": "The Song of the Lark",
@@ -90,24 +81,6 @@
     "ai_evidence": null
   },
   {
-    "id": "6595fece951b544e",
-    "is_ai": true,
-    "title": "AI-Generated Painting of a Kalari Warrior, Chekavar, in His Traditional Warrior-cum-Yogic Attire, Depicting a Traditional Kalari Warrior",
-    "artist": "Piiio8998",
-    "source_url": "https://commons.wikimedia.org/wiki/File:AI-Generated_Painting_of_a_Kalari_Warrior,_Chekavar,_in_His_Traditional_Warrior-cum-Yogic_Attire,_Depicting_a_Traditional_Kalari_Warrior.png",
-    "license": "CC BY-SA 4.0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
-  },
-  {
-    "id": "252a317cb4deac58",
-    "is_ai": true,
-    "title": "Hazan ai rabbit keyboard",
-    "artist": "Shazan",
-    "source_url": "https://commons.wikimedia.org/wiki/File:Hazan_ai_rabbit_keyboard.jpg",
-    "license": "CC BY-SA 4.0, via Wikimedia Commons",
-    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated paintings"
-  },
-  {
     "id": "0cf452c49f5af6f6",
     "is_ai": true,
     "title": "Vincent van Gogh in watercolour",
@@ -162,20 +135,47 @@
     "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
   },
   {
-    "id": "98f423684ea935c1",
+    "id": "94b89dacfd573726",
+    "is_ai": false,
+    "title": "Mahana no atua (Day of the God)",
+    "artist": "Paul Gauguin",
+    "source_url": "https://www.artic.edu/artworks/27943",
+    "license": "CC0 (public domain), Art Institute of Chicago",
+    "ai_evidence": null
+  },
+  {
+    "id": "780c1833e69d7a3b",
     "is_ai": true,
-    "title": "Adobe Firefly generated landscape photography",
-    "artist": "Adobe Firefly Image 3, prompted by Jiří Vedral",
-    "source_url": "https://commons.wikimedia.org/wiki/File:Adobe_Firefly_generated_landscape_photography.jpg",
+    "title": "Android making a conclusion in 2740",
+    "artist": "Prototyperspective",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Android_making_a_conclusion_in_2740.png",
+    "license": "CC0, via Wikimedia Commons",
+    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+  },
+  {
+    "id": "b5c082e0169016eb",
+    "is_ai": true,
+    "title": "AppleIntelligenceLandscape",
+    "artist": "Apple Intelligence Image Playground",
+    "source_url": "https://commons.wikimedia.org/wiki/File:AppleIntelligenceLandscape.jpg",
     "license": "Public domain, via Wikimedia Commons",
     "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
   },
   {
-    "id": "cc3167f7298f503c",
+    "id": "494827fb11734e47",
     "is_ai": true,
-    "title": "Afet Çeşitleri",
+    "title": "CavernOfGoldLyingDeepBeneathMountainLake",
+    "artist": "Bing Image Creator, בהנחיה של דון אקווילינו",
+    "source_url": "https://commons.wikimedia.org/wiki/File:CavernOfGoldLyingDeepBeneathMountainLake.png",
+    "license": "Public domain, via Wikimedia Commons",
+    "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
+  },
+  {
+    "id": "f9b7e674e2e0c729",
+    "is_ai": true,
+    "title": "ChatGPT image of a moonlit forest",
     "artist": "ChatGPT",
-    "source_url": "https://commons.wikimedia.org/wiki/File:Afet_%C3%87e%C5%9Fitleri.png",
+    "source_url": "https://commons.wikimedia.org/wiki/File:ChatGPT_image_of_a_moonlit_forest.jpg",
     "license": "Public domain, via Wikimedia Commons",
     "ai_evidence": "Listed in Wikimedia Commons Category:AI-generated landscapes"
   }

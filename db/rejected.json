@@ -1,0 +1,32 @@
+[
+  {
+    "source_url": "https://www.artic.edu/artworks/9",
+    "title": "Interior of St. Mark's, Venice",
+    "reason": "Photo includes the gilt frame, which hints human"
+  },
+  {
+    "source_url": "https://commons.wikimedia.org/wiki/File:AI-Generated_Painting_of_a_Kalari_Warrior,_Chekavar,_in_His_Traditional_Warrior-cum-Yogic_Attire,_Depicting_a_Traditional_Kalari_Warrior.png",
+    "title": "AI-Generated Painting of a Kalari Warrior, Chekavar, in His Traditional Warrior-cum-Yogic Attire, Depicting a Traditional Kalari Warrior",
+    "reason": "Visible DALL-E watermark strip"
+  },
+  {
+    "source_url": "https://commons.wikimedia.org/wiki/File:Hazan_ai_rabbit_keyboard.jpg",
+    "title": "Hazan ai rabbit keyboard",
+    "reason": "Visible DALL-E watermark strip"
+  },
+  {
+    "source_url": "https://commons.wikimedia.org/wiki/File:Adobe_Firefly_generated_landscape_photography.jpg",
+    "title": "Adobe Firefly generated landscape photography",
+    "reason": "Photograph, not artwork"
+  },
+  {
+    "source_url": "https://commons.wikimedia.org/wiki/File:Afet_%C3%87e%C5%9Fitleri.png",
+    "title": "Afet Çeşitleri",
+    "reason": "Infographic, not artwork"
+  },
+  {
+    "source_url": "https://commons.wikimedia.org/wiki/File:AI-generated_information_poster_on_Grasslands_National_Park_in_Saskatchewan,_Canada.png",
+    "title": "AI-generated information poster on Grasslands National Park in Saskatchewan, Canada",
+    "reason": "Infographic poster, not artwork"
+  }
+]

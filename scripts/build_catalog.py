@@ -13,10 +13,15 @@ Steps:
   4. Generate db/seed.sql from catalog.json.
 
 Re-running keeps existing catalog entries (and their IDs) and only adds new ones
-until the per-source target count is reached. Delete an entry from catalog.json
-(and its image) to reject it; run with --seed-only to just regenerate seed.sql.
+until the per-source target count is reached. Run with --seed-only to just
+regenerate seed.sql.
+
+To reject an image: --reject ID REASON. It is removed from the catalog, its file
+is moved to scripts/raw/rejected/, and its source is recorded in db/rejected.json
+so it is never fetched again.
 
 Usage: python scripts/build_catalog.py [--human N] [--ai N] [--seed-only]
+       python scripts/build_catalog.py --reject ID REASON
 """
 
 import argparse
@@ -35,7 +40,9 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "db" / "catalog.json"
 SEED = ROOT / "db" / "seed.sql"
+REJECTED = ROOT / "db" / "rejected.json"   # sources reviewed and refused, with reasons
 IMG_DIR = ROOT / "public" / "img"
+REJECTED_IMG_DIR = ROOT / "scripts" / "raw" / "rejected"
 
 USER_AGENT = "PENCILSLOP-class-project/0.1 (njk796@eid.utexas.edu)"
 SQUARE_SIDE = 640      # every image is served at exactly this size
@@ -139,9 +146,33 @@ def normalize(raw_bytes, out_path):
     img.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
 
 
+def load_json(path):
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
+def save_json(path, data):
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def reject(catalog, image_id, reason):
+    """Remove an entry, keep its file aside, and remember its source so it isn't re-fetched."""
+    entry = next((e for e in catalog if e["id"] == image_id), None)
+    if entry is None:
+        sys.exit(f"No catalog entry with id {image_id}")
+    catalog.remove(entry)
+    rejected = load_json(REJECTED)
+    rejected.append({"source_url": entry["source_url"], "title": entry["title"], "reason": reason})
+    save_json(REJECTED, rejected)
+    REJECTED_IMG_DIR.mkdir(parents=True, exist_ok=True)
+    src = IMG_DIR / f"{image_id}.jpg"
+    if src.exists():
+        src.replace(REJECTED_IMG_DIR / src.name)
+    print(f"  - rejected {image_id}  {entry['title'][:60]}  ({reason})")
+
+
 def add_entries(catalog, candidates, target, is_ai):
     have = sum(1 for e in catalog if e["is_ai"] == is_ai)
-    known = {e["source_url"] for e in catalog}
+    known = {e["source_url"] for e in catalog} | {r["source_url"] for r in load_json(REJECTED)}
     for c in candidates:
         if have >= target:
             break
@@ -179,13 +210,17 @@ def main():
     ap.add_argument("--human", type=int, default=10)
     ap.add_argument("--ai", type=int, default=10)
     ap.add_argument("--seed-only", action="store_true")
+    ap.add_argument("--reject", nargs=2, metavar=("ID", "REASON"))
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # titles include non-Latin text
     IMG_DIR.mkdir(parents=True, exist_ok=True)
-    catalog = json.loads(CATALOG.read_text(encoding="utf-8")) if CATALOG.exists() else []
+    catalog = load_json(CATALOG)
 
-    if not args.seed_only:
+    if args.reject:
+        reject(catalog, *args.reject)
+        save_json(CATALOG, catalog)
+    elif not args.seed_only:
         try:
             print("Human art (Art Institute of Chicago):")
             add_entries(catalog, human_candidates(args.human), args.human, False)
@@ -193,7 +228,7 @@ def main():
             add_entries(catalog, ai_candidates(args.ai), args.ai, True)
         finally:
             # Save even after an error so every saved image has a catalog entry.
-            CATALOG.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            save_json(CATALOG, catalog)
 
     write_seed(catalog)
     print(f"Catalog: {sum(not e['is_ai'] for e in catalog)} human, {sum(e['is_ai'] for e in catalog)} AI -> {SEED.name}")
