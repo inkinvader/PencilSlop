@@ -44,4 +44,10 @@ When the Developer directs the Agent to save a transcript, save the entire text 
 
 # Project
 
-Fill in as the project takes shape: how to run it locally, how to test it, and any commands or structure that aren't obvious from the code.
+PENCILSLOP: a web game where players judge which of two artworks is AI-generated. Live at https://pencilslop.pencilslop.workers.dev. Architecture and rules: `spec.md`.
+
+- **Run locally**: `npm install`, then `npx wrangler d1 migrations apply pencilslop --local`, then `npx wrangler dev` (http://127.0.0.1:8787). A fresh local database is empty; run `python scripts/ingest.py --local --import-legacy` or `--local --human 5 --ai 5`.
+- **Deploy**: `git pull` first (the nightly job commits images), then `npx wrangler deploy`.
+- **Catalog**: only through `scripts/ingest.py` (see its docstring). The nightly GitHub Actions workflow runs `--remote --human 10 --ai 5`. Hide a bad image with `--remote --reject ID "reason"`.
+- **Schema**: add a new file in `migrations/` and apply it with `--local`, then `--remote`.
+- **Cost**: free tiers only, no paid services (Developer constraint).

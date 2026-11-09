@@ -31,6 +31,10 @@ Approved for Phase 2:
 | Crowd stats | Each answer adds one vote (AI or human) per image. The reveal shows counts from before this vote and hides percentages until an image has at least 3 votes. |
 | Streak and best | Streak resets on a new run; best is stored in `localStorage` and the game still works if storage is blocked. |
 | Shared across devices | Two devices playing the deployed URL see each other's votes in the stats. |
+| Reports | After a round is answered, each image has a Report button. One report counts per image per round; reporting before answering is refused (409). At 3 reports an image stops being served. |
+| Catalog growth | A nightly job adds new images with no manual review, using only the fixed rules below. There is no set catalog size. |
+| Fixed catalog rules | Human: AIC public-domain painting. AI: the Commons file page names a generator or carries `{{PD-algorithm}}`. Both: free license, JPEG/PNG/WebP, no more than 1.6:1 before the square crop, no "not artwork" title words. Every refused source is recorded and never fetched again. |
+| Cost | The whole system runs on free tiers with no payment method: Cloudflare Workers + D1 and GitHub Actions. |
 
 Provisional, not yet specified: difficulty tiers, avoiding repeat images within a run, branding polish, accessibility pass, phone layout refinements.
 
@@ -38,28 +42,33 @@ Provisional, not yet specified: difficulty tiers, avoiding repeat images within 
 
 ### Overview
 
-One Cloudflare Worker serves everything:
+One Cloudflare Worker serves the game; a nightly GitHub Actions job grows the catalog.
 
 ```
-Browser (public/: index.html, game.js, style.css, img/*.jpg)
+Browser (public/: index.html, game.js, style.css, img/<id>.jpg)
    |  static files served directly by Cloudflare's asset handler
-   |  POST /api/round, POST /api/answer
+   |  POST /api/round, /api/answer, /api/report
    v
-Worker (src/worker.js) --> D1 database "pencilslop" (images, rounds)
+Worker (src/worker.js) --> D1 database "pencilslop" (images, rounds, reports, rejected)
 
-Offline: scripts/build_catalog.py --> public/img/*.jpg + db/catalog.json --> db/seed.sql
+Nightly (GitHub Actions, .github/workflows/nightly-ingest.yml):
+  scripts/ingest.py: fetch candidates -> fixed rules -> normalize to public/img/
+                     -> git commit + push -> wrangler deploy -> insert D1 rows
 ```
 
 ### Data and state
 
-- **`db/catalog.json`**: the reviewable list of artworks (ID, AI or not, title, artist, source, license, AI evidence). It is the source of truth for catalog content; `db/seed.sql` is generated from it.
-- **D1 `images`**: the catalog as loaded on the server, plus vote counts. This is the source of truth for whether an image is AI and for crowd stats.
+- **D1 `images`**: the catalog. It is the source of truth for whether an image is AI, its credit and license, its evidence, whether it is active, its report count, and its vote counts.
+- **D1 `rejected`**: every source refused by a rule or a reject command. The ingest never fetches these again.
 - **D1 `rounds`**: every served pair, its timestamp, and its choice once answered. This lets the server check answers and reject repeats.
-- **Browser**: only the current streak, the timer, and the personal best (`localStorage`). The browser never stores answers.
+- **D1 `reports`**: one row per (round, image) report. `images.reports` is the running count.
+- **`public/img/`**: the image files, committed to git and deployed as static assets. A file without an `images` row is never served in a round.
+- **Browser**: only the current streak, the timer, and the personal best (`localStorage`).
+- `db/catalog.json`, `db/seed.sql`, `db/rejected.json`: Phase 2 records, imported into D1 on 2026-11-09 and no longer read.
 
 ### Interaction loop
 
-Play → `POST /api/round` → load both images → timer starts → player chooses (or timer ends) → `POST /api/answer` → server checks, records votes, returns the reveal → captions and borders show the truth, credits, and crowd percentages → Next (if correct) or Play again (if the run is over).
+Play → `POST /api/round` (active images only) → load both images → timer starts → player chooses (or the timer ends) → `POST /api/answer` → the server checks, records votes, and returns the reveal → captions show the truth, credit, crowd percentages, and a Report button → Next (if correct) or Play again.
 
 ### Visual and content rules
 
@@ -67,16 +76,22 @@ Play → `POST /api/round` → load both images → timer starts → player choo
 - Colors are tokens in `public/style.css` (`--purple`, `--ink`, `--pencil`, `--metal`, and the four answer colors).
 - Left and right answers sit under their image (2×2 grid on phones).
 - Reveal borders: green for human, red for AI.
-- Every image goes through the same normalization in `build_catalog.py`. Images more than 1.6:1 from square are skipped rather than cropped hard.
+- Every image goes through the same normalization in `ingest.py`: a 640×640 centre crop, JPEG quality 82, no metadata.
 
 ### Structure rules
 
-- API logic only in `src/worker.js`. Presentation only in `public/`. Catalog building only in `scripts/`.
-- Catalog changes go through `catalog.json` and the build script, never hand-edited SQL.
-- Tunable constants (timer, grace period, AI chance range, minimum votes) are named at the top of the file that uses them.
+- API logic only in `src/worker.js`. Presentation only in `public/`. Catalog changes only through `scripts/ingest.py`, never hand-written SQL.
+- Schema changes are new files in `migrations/`, applied with `wrangler d1 migrations apply`.
+- Publish order is images live first, then rows. Always `git pull` before deploying by hand, because the nightly job commits images.
+- Images are hidden (`active = 0`), never deleted, so past rounds stay valid.
+- Tunable constants (timer, grace period, AI chance range, minimum votes, reports to hide, crop size) are named at the top of the file that uses them.
 
 ### Decisions and changes
 
-- **Single Worker with static assets instead of Pages + Workers + R2** (2026-11-09). One deploy, no R2 setup. Adding images means redeploying, which suits a curated catalog. Can move images to R2 if the catalog grows large.
+- **Single Worker with static assets** (2026-11-09). One deploy, no separate host.
 - **Square 640 px crop for all images** (2026-11-09). The first catalog showed every AI image was square and no human one was, which gave the answer away. Trade-off: the edges of non-square works are trimmed.
 - **Vote counters on `images`** rather than computing stats from `rounds` each time. Cheap reads; `rounds` still keeps each choice.
+- **AI proof must be on the file page** (2026-11-09). Category membership is user-editable and let 4 unconfirmed images in.
+- **Automated growth with no manual review** (2026-11-09, Developer). The final catalog has no set size, so review by hand can't scale. D1 replaced `catalog.json` as the source of truth, and player reports were added as the backstop.
+- **Free design: no R2, no paid screening** (2026-11-09, Developer has no budget). R2 (images outside the deploy) and Claude vision screening were built and tested locally, then dropped: R2 may need a card and the Claude API is paid. Images stay in the repo as static assets (the free plan allows 20,000 files), and screening is fixed rules plus reports. Trade-off: photorealistic images, text inside images, watermarks without text, and near-duplicates can get in until players report them.
+- **Nightly job on GitHub Actions, not a Cloudflare cron** (2026-11-09). The Workers free plan allows 10 ms CPU per run, too little to process images.

@@ -30,6 +30,13 @@ Phase 2:
 6. [x] Deploy: Cloudflare login, create the remote D1 database, load the schema and seed, `wrangler deploy`. Live at https://pencilslop.pencilslop.workers.dev
 7. [ ] Two-device test on the public URL, plus a network check in DevTools.
 
+Phase 2, automated catalog (approved 2026-11-09):
+
+8. [x] D1 migrations (`active`, `reports`, `added_at`, `screening`; `rejected` and `reports` tables). Applied live; 254 rows and their votes kept.
+9. [x] Worker: serve active images only; `/api/report` with auto-hide at 3 reports.
+10. [x] `scripts/ingest.py` (fixed rules, publish order) and the nightly workflow.
+11. [ ] Developer: create a Cloudflare API token and add the two GitHub secrets, then trigger one manual workflow run.
+
 ## Testing and evidence
 
 2026-11-09, local (`wrangler dev`, local D1):
@@ -46,6 +53,12 @@ Phase 2:
 - Live API: the round response held only an ID and image paths, images were served (200 image/jpeg), the answer returned the truth, and a repeat answer gave 409.
 - Headless Edge against the live URL (desktop and phone): the full round and reveal worked, and "Not enough votes yet" showed on the fresh database.
 - Agent test rounds cast about 5 votes in the live database.
+
+2026-11-09, automated pipeline:
+- Local: migrations applied. R2 serving, reports (409 before answering, one per round, 400 on a bad side), auto-hide at the 3rd report, and the report button in Edge all worked. The R2 path was later removed (free design).
+- Local rules-only ingest of 2 + 2: the AI pair included a protest sign with text and a near-duplicate of an existing image. Rules alone let both through.
+- Live: migrations applied with votes kept (116, then 122 with live play). 58 rejections imported. Round, image, and answer worked, and a report before answering was refused.
+- Live end-to-end ingest of 1 + 1: images were committed and pushed (`a00a7f0`), deployed, served (200), and their rows added. The text-sign image was then hidden with `--reject`.
 
 ## Simplification reviews
 
