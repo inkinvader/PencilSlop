@@ -1,0 +1,55 @@
+# Grows the PENCILSLOP catalog every night: fetches new candidate artworks,
+# applies the fixed rules, screens each image with Claude, and stores passing
+# images in R2 + D1. See scripts/ingest.py.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   CLOUDFLARE_API_TOKEN   token with D1 edit and R2 edit permissions
+#   CLOUDFLARE_ACCOUNT_ID  Cloudflare account ID
+#   ANTHROPIC_API_KEY      Claude API key used for screening
+name: Nightly catalog ingest
+
+on:
+  schedule:
+    - cron: "0 8 * * *"      # 08:00 UTC = 2 or 3 AM US Central
+  workflow_dispatch:          # "Run workflow" button for a manual run
+    inputs:
+      human:
+        description: "New human artworks to add"
+        default: "10"
+      ai:
+        description: "New AI images to add"
+        default: "5"
+
+concurrency:
+  group: ingest                # never run two ingests at once
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+      - run: pip install -r scripts/requirements.txt
+
+      - name: Ingest new artworks
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Inputs pass through env (not inlined into the command) so they can't inject shell code.
+          HUMAN: ${{ github.event.inputs.human || '10' }}
+          AI: ${{ github.event.inputs.ai || '5' }}
+        run: python scripts/ingest.py --remote --human "$HUMAN" --ai "$AI"

@@ -64,8 +64,8 @@ async function submit(choice) {
   const res = await api("/api/answer", { roundId, choice });
   if (!res) return;
 
-  showReveal("left", res.left);
-  showReveal("right", res.right);
+  showReveal("left", res.left, roundId);
+  showReveal("right", res.right, roundId);
 
   if (res.correct) {
     state.streak += 1;
@@ -85,8 +85,8 @@ async function submit(choice) {
   $("result").hidden = false;
 }
 
-// Caption under each artwork: truth, credit/link for human art, and prior crowd votes.
-function showReveal(side, img) {
+// Caption under each artwork: truth, credit/link, prior crowd votes, and a report button.
+function showReveal(side, img, roundId) {
   $(`${side}-fig`).className = `art ${img.isAI ? "is-ai" : "is-human"}`;
   const cap = $(`${side}-cap`);
   cap.replaceChildren();
@@ -108,18 +108,31 @@ function showReveal(side, img) {
       ? `${Math.round((img.votesAI / total) * 100)}% of ${total} earlier players said AI`
       : "Not enough votes yet"
   );
+
+  // Players flag unfair images (watermark, text, wrong label); enough reports hide it.
+  const flag = document.createElement("button");
+  flag.className = "flag";
+  flag.textContent = "Report image";
+  flag.addEventListener("click", async () => {
+    flag.disabled = true;
+    const ok = await api("/api/report", { roundId, side }, { quiet: true });
+    flag.textContent = ok ? "Reported, thanks" : "Couldn't report";
+  });
+  cap.append(document.createElement("br"), flag);
 }
 
 function label(choice) {
   return { left: "Left is AI", right: "Right is AI", both: "Both", neither: "Neither" }[choice];
 }
 
-async function api(path, body = {}) {
+// quiet: a failure doesn't interrupt the game (used for optional actions like reporting).
+async function api(path, body = {}, { quiet = false } = {}) {
   try {
     const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
     return await res.json();
   } catch (err) {
+    if (quiet) return null;
     showError(`Something went wrong: ${err.message}`);
     $("result").hidden = false;
     $("next-btn").textContent = "Try again";

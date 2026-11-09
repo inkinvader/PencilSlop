@@ -1,21 +1,29 @@
-// PENCILSLOP Worker: game API. Static files (page, scripts, images) in public/
-// are served by Cloudflare's asset handler; only /api/* requests reach this code.
+// PENCILSLOP Worker: game API and image serving. Static files (page, scripts)
+// in public/ are served by Cloudflare's asset handler; everything else reaches
+// this code.
 //
 //   POST /api/round   -> { roundId, left, right, seconds }   (no answer included)
 //   POST /api/answer  { roundId, choice } -> truth, credits, and prior crowd votes
+//   POST /api/report  { roundId, side }   -> flag an image from an answered round
+//   GET  /img/<id>.jpg                    -> artwork from the R2 bucket
 
 const ROUND_SECONDS = 10;
 const GRACE_MS = 3000;                 // allowance for network latency on the timer
 const AI_CHANCE_MIN = 0.2;             // each round picks its AI chance in this range
 const AI_CHANCE_MAX = 0.6;
+const REPORTS_TO_HIDE = 3;             // an image with this many reports stops being served
 const CHOICES = ["left", "right", "both", "neither", "timeout"];
+const IMAGE_PATH = /^\/img\/([0-9a-f]{16})\.jpg$/;
 
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     try {
+      const image = pathname.match(IMAGE_PATH);
+      if (request.method === "GET" && image) return await serveImage(env, image[1]);
       if (request.method === "POST" && pathname === "/api/round") return await newRound(env);
       if (request.method === "POST" && pathname === "/api/answer") return await answer(request, env);
+      if (request.method === "POST" && pathname === "/api/report") return await report(request, env);
       return json({ error: "Not found" }, 404);
     } catch (err) {
       console.error(err);
@@ -44,7 +52,7 @@ async function newRound(env) {
 
 async function randomImage(env, isAI, excludeId) {
   const row = await env.DB.prepare(
-    "SELECT id FROM images WHERE is_ai = ? AND id != ? ORDER BY RANDOM() LIMIT 1"
+    "SELECT id FROM images WHERE active = 1 AND is_ai = ? AND id != ? ORDER BY RANDOM() LIMIT 1"
   ).bind(isAI ? 1 : 0, excludeId ?? "").first();
   return row?.id ?? null;
 }
@@ -96,6 +104,41 @@ async function answer(request, env) {
     correctChoice,
     left: reveal(left),
     right: reveal(right),
+  });
+}
+
+// A player flags an image as unfair (watermark, text, mislabeled...). Only images
+// from a round that has been answered can be reported, once per image per round.
+// At REPORTS_TO_HIDE reports the image stops being served.
+async function report(request, env) {
+  const { roundId, side } = await request.json().catch(() => ({}));
+  if (typeof roundId !== "string" || (side !== "left" && side !== "right")) {
+    return json({ error: "Bad request" }, 400);
+  }
+  const round = await env.DB.prepare("SELECT left_id, right_id, choice FROM rounds WHERE id = ?").bind(roundId).first();
+  if (!round) return json({ error: "Unknown round" }, 404);
+  if (round.choice === null) return json({ error: "Answer the round first" }, 409);
+
+  const imageId = side === "left" ? round.left_id : round.right_id;
+  const inserted = await env.DB.prepare(
+    "INSERT OR IGNORE INTO reports (round_id, image_id, created_at) VALUES (?, ?, ?)"
+  ).bind(roundId, imageId, Date.now()).run();
+  if (inserted.meta.changes === 0) return json({ ok: true, duplicate: true });
+
+  await env.DB.prepare(
+    `UPDATE images SET reports = reports + 1,
+       active = CASE WHEN reports + 1 >= ? THEN 0 ELSE active END
+     WHERE id = ?`
+  ).bind(REPORTS_TO_HIDE, imageId).run();
+  return json({ ok: true });
+}
+
+// Images are immutable once stored, so browsers and Cloudflare may cache them for a long time.
+async function serveImage(env, id) {
+  const object = await env.IMAGES.get(`${id}.jpg`);
+  if (!object) return new Response("Not found", { status: 404 });
+  return new Response(object.body, {
+    headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=31536000, immutable" },
   });
 }
 

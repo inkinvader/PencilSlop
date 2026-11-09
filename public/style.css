@@ -68,6 +68,12 @@ main { flex: 1; display: flex; flex-direction: column; padding: var(--gap); min-
 .art figcaption { padding: 8px; font-size: 0.9rem; line-height: 1.4; }
 .art figcaption:empty { display: none; }
 .art figcaption a { color: var(--pencil); }
+.flag {
+  margin-top: 4px; padding: 2px 8px;
+  background: none; border: 1px solid var(--metal); border-radius: 6px;
+  color: var(--metal); font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+.flag:disabled { opacity: 0.6; cursor: default; }
 .art.is-ai { border-color: var(--red); }
 .art.is-human { border-color: var(--green); }
 
