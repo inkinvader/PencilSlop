@@ -1,0 +1,97 @@
+/* PENCILSLOP MVP styles. Layout model: full-height column of
+   top bar (fixed height) → artwork pair (fills remaining space) → answer strip (compact). */
+
+:root {
+  --purple: #3b1c8c;
+  --ink: #1e1240;
+  --pencil: #ffc31f;
+  --metal: #c9d3e0;
+  --red: #e2364b;
+  --blue: #2f6fe0;
+  --yellow: #d89e00;
+  --green: #22a05b;
+  --gap: 12px;
+}
+
+* { box-sizing: border-box; }
+
+/* The hidden attribute always wins over layout display rules below. */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: var(--purple);
+  color: #fff;
+  font-family: "Arial Rounded MT Bold", "Segoe UI", system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  background: var(--ink);
+  font-size: 1.1rem;
+}
+.wordmark { font-weight: 900; margin-right: auto; letter-spacing: 1px; }
+.pencil { color: var(--pencil); }
+.slop { color: var(--metal); }
+.timer {
+  min-width: 2.4em; height: 2.4em;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--pencil); color: var(--ink);
+  font-weight: 900; font-size: 1.2rem;
+}
+
+main { flex: 1; display: flex; flex-direction: column; padding: var(--gap); min-height: 0; }
+
+.panel { margin: auto; max-width: 520px; text-align: center; }
+.panel h1 { font-size: 2.2rem; }
+
+#round { flex: 1; display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+
+/* Artworks take all remaining height. */
+.pair { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); min-height: 0; }
+.art {
+  margin: 0;
+  display: flex; flex-direction: column;
+  background: var(--ink);
+  border: 6px solid var(--ink);
+  border-radius: 14px;
+  min-height: 0;
+}
+.art img { flex: 1; width: 100%; min-height: 0; object-fit: contain; }
+.art figcaption { padding: 8px; font-size: 0.9rem; line-height: 1.4; }
+.art figcaption:empty { display: none; }
+.art figcaption a { color: var(--pencil); }
+.art.is-ai { border-color: var(--red); }
+.art.is-human { border-color: var(--green); }
+
+/* Compact answer strip; left/right answers sit under their image. */
+.answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); }
+.ans, .primary {
+  border: 0; border-radius: 10px;
+  padding: 14px 10px;
+  font: inherit; font-weight: 900; font-size: 1rem;
+  color: #fff; cursor: pointer;
+}
+.ans:disabled { opacity: 0.5; cursor: default; }
+.a-left { background: var(--red); }
+.a-both { background: var(--blue); }
+.a-neither { background: var(--yellow); }
+.a-right { background: var(--green); }
+.primary { background: var(--pencil); color: var(--ink); padding: 14px 32px; }
+
+.result { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.error { text-align: center; color: var(--pencil); }
+
+/* Phones: images stay side by side, answers become a 2×2 grid. */
+@media (max-width: 600px) {
+  .bar { gap: 12px; font-size: 0.95rem; }
+  .answers { grid-template-columns: 1fr 1fr; }
+  .a-left { order: 1; } .a-right { order: 2; } .a-both { order: 3; } .a-neither { order: 4; }
+}

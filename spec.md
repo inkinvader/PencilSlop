@@ -16,36 +16,67 @@ When you begin this step, start a fresh chat so its transcript stays clean. For 
 
 ## Intended experience
 
-What Users should be able to do and experience in the current version, tied to the goals in your pitch.
+Phase 2 MVP (approved 2026-11-09). A player opens the public URL, presses Play, and sees two artworks. Within 10 seconds they choose **Left is AI**, **Right is AI**, **Both**, or **Neither**. A correct answer adds to the streak; a wrong answer or timeout ends the run. After every answer the game reveals which work is AI, credits and links each work's source, and shows what percentage of earlier players judged each work as AI. The personal best is kept on the device.
 
 ## Behavior and acceptance checks
 
-For each feature or behavior you are building, describe what it should do and what counts as working, including failure cases and accessibility where they apply. Distinguish approved behavior from provisional ideas, and leave untested details open until they are needed.
+Approved for Phase 2:
+
+| Behavior | Counts as working |
+|---|---|
+| Pair selection | Each round picks an AI chance uniformly in 20–60%; each slot is independently AI with that chance. Over many rounds all four answers occur (about Neither 37%, Left 23%, Right 23%, Both 17%). |
+| No answer leak | The round response holds only a round ID and two neutral image URLs. All images are 640×640 JPEGs with no metadata, so shape and file properties don't reveal the answer. |
+| Server-checked answer | The server compares the choice with D1 and returns the truth. A second answer to the same round is rejected (409). Unknown rounds (404) and invalid choices (400) are rejected. |
+| Timer | 10 s on the client, starting once both images have loaded. The server records any answer later than 13 s after the round was served as a timeout. A timeout ends the run and casts no votes. |
+| Crowd stats | Each answer adds one vote (AI or human) per image. The reveal shows counts from before this vote and hides percentages until an image has at least 3 votes. |
+| Streak and best | Streak resets on a new run; best is stored in `localStorage` and the game still works if storage is blocked. |
+| Shared across devices | Two devices playing the deployed URL see each other's votes in the stats. |
+
+Provisional, not yet specified: difficulty tiers, avoiding repeat images within a run, branding polish, accessibility pass, phone layout refinements.
 
 ## Architecture
 
-How the system works and the structural decisions that keep it coherent, consistent, and easy to change. Adapt these sections to your project and tech stack.
-
 ### Overview
 
-The main parts of the system, what each is responsible for, and how they connect. Include a simple diagram.
+One Cloudflare Worker serves everything:
+
+```
+Browser (public/: index.html, game.js, style.css, img/*.jpg)
+   |  static files served directly by Cloudflare's asset handler
+   |  POST /api/round, POST /api/answer
+   v
+Worker (src/worker.js) --> D1 database "pencilslop" (images, rounds)
+
+Offline: scripts/build_catalog.py --> public/img/*.jpg + db/catalog.json --> db/seed.sql
+```
 
 ### Data and state
 
-What information the system keeps, where each piece lives, and how it moves and changes. Name the single source of truth for each important piece of state.
+- **`db/catalog.json`**: the reviewable list of artworks (ID, AI or not, title, artist, source, license, AI evidence). It is the source of truth for catalog content; `db/seed.sql` is generated from it.
+- **D1 `images`**: the catalog as loaded on the server, plus vote counts. This is the source of truth for whether an image is AI and for crowd stats.
+- **D1 `rounds`**: every served pair, its timestamp, and its choice once answered. This lets the server check answers and reject repeats.
+- **Browser**: only the current streak, the timer, and the personal best (`localStorage`). The browser never stores answers.
 
 ### Interaction loop
 
-How User input or other events lead to changes in state and then to what the User sees, hears, or receives.
+Play → `POST /api/round` → load both images → timer starts → player chooses (or timer ends) → `POST /api/answer` → server checks, records votes, returns the reveal → captions and borders show the truth, credits, and crowd percentages → Next (if correct) or Play again (if the run is over).
 
 ### Visual and content rules
 
-The shared rules that establish the art style and keep the presentation consistent, such as branding, layout, color, type, motion, sound, and asset conventions.
+- Kahoot-inspired quiz-show look with the art first. Layout is a column: top bar (wordmark, streak, best, timer), then the artwork pair filling the remaining height, then a compact answer strip.
+- Colors are tokens in `public/style.css` (`--purple`, `--ink`, `--pencil`, `--metal`, and the four answer colors).
+- Left and right answers sit under their image (2×2 grid on phones).
+- Reveal borders: green for human, red for AI.
+- Every image goes through the same normalization in `build_catalog.py`. Images more than 1.6:1 from square are skipped rather than cropped hard.
 
 ### Structure rules
 
-The conventions that keep the system lean: how files and code are organized, where new features belong, and the general rules that handle cases by design instead of one-off fixes.
+- API logic only in `src/worker.js`. Presentation only in `public/`. Catalog building only in `scripts/`.
+- Catalog changes go through `catalog.json` and the build script, never hand-edited SQL.
+- Tunable constants (timer, grace period, AI chance range, minimum votes) are named at the top of the file that uses them.
 
 ### Decisions and changes
 
-Consequential structural decisions, the alternatives considered, and why you chose as you did, including later changes to the structure.
+- **Single Worker with static assets instead of Pages + Workers + R2** (2026-11-09). One deploy, no R2 setup. Adding images means redeploying, which suits a curated catalog. Can move images to R2 if the catalog grows large.
+- **Square 640 px crop for all images** (2026-11-09). The first catalog showed every AI image was square and no human one was, which gave the answer away. Trade-off: the edges of non-square works are trimmed.
+- **Vote counters on `images`** rather than computing stats from `rounds` each time. Cheap reads; `rounds` still keeps each choice.

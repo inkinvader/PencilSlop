@@ -1,0 +1,5 @@
+node_modules/
+.wrangler/
+.dev.vars
+# Raw downloads before normalization; only processed images in public/img are committed
+scripts/raw/

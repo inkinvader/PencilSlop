@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PENCILSLOP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top bar: streak, personal best, timer -->
+  <header class="bar">
+    <span class="wordmark"><span class="pencil">PENCIL</span><span class="slop">SLOP</span></span>
+    <span>Streak <strong id="streak">0</strong></span>
+    <span>Best <strong id="best">0</strong></span>
+    <span class="timer" id="timer" aria-live="off">10</span>
+  </header>
+
+  <main>
+    <!-- Start screen -->
+    <section id="start" class="panel">
+      <h1>Which one is AI?</h1>
+      <p>Two artworks. Ten seconds. Left, right, both, or neither could be AI-generated. One wrong answer ends your run.</p>
+      <button class="primary" id="start-btn">Play</button>
+    </section>
+
+    <!-- Round: the two artworks dominate; answers are a compact strip below -->
+    <section id="round" hidden>
+      <div class="pair">
+        <figure class="art" id="left-fig"><img id="left-img" alt="Artwork A"><figcaption id="left-cap"></figcaption></figure>
+        <figure class="art" id="right-fig"><img id="right-img" alt="Artwork B"><figcaption id="right-cap"></figcaption></figure>
+      </div>
+      <div class="answers" id="answers">
+        <button class="ans a-left"    data-choice="left">▲ Left is AI</button>
+        <button class="ans a-both"    data-choice="both">◆ Both</button>
+        <button class="ans a-neither" data-choice="neither">● Neither</button>
+        <button class="ans a-right"   data-choice="right">■ Right is AI</button>
+      </div>
+      <div class="result" id="result" hidden>
+        <p id="verdict" role="status"></p>
+        <button class="primary" id="next-btn">Next</button>
+      </div>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
