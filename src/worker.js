@@ -1,11 +1,10 @@
-// PENCILSLOP Worker: game API and image serving. Static files (page, scripts)
-// in public/ are served by Cloudflare's asset handler; everything else reaches
-// this code.
+// PENCILSLOP Worker: game API. Static files in public/ (page, scripts, and the
+// artwork images in public/img/) are served by Cloudflare's asset handler; only
+// /api/* requests reach this code.
 //
 //   POST /api/round   -> { roundId, left, right, seconds }   (no answer included)
 //   POST /api/answer  { roundId, choice } -> truth, credits, and prior crowd votes
 //   POST /api/report  { roundId, side }   -> flag an image from an answered round
-//   GET  /img/<id>.jpg                    -> artwork from the R2 bucket
 
 const ROUND_SECONDS = 10;
 const GRACE_MS = 3000;                 // allowance for network latency on the timer
@@ -13,14 +12,11 @@ const AI_CHANCE_MIN = 0.2;             // each round picks its AI chance in this
 const AI_CHANCE_MAX = 0.6;
 const REPORTS_TO_HIDE = 3;             // an image with this many reports stops being served
 const CHOICES = ["left", "right", "both", "neither", "timeout"];
-const IMAGE_PATH = /^\/img\/([0-9a-f]{16})\.jpg$/;
 
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     try {
-      const image = pathname.match(IMAGE_PATH);
-      if (request.method === "GET" && image) return await serveImage(env, image[1]);
       if (request.method === "POST" && pathname === "/api/round") return await newRound(env);
       if (request.method === "POST" && pathname === "/api/answer") return await answer(request, env);
       if (request.method === "POST" && pathname === "/api/report") return await report(request, env);
@@ -131,15 +127,6 @@ async function report(request, env) {
      WHERE id = ?`
   ).bind(REPORTS_TO_HIDE, imageId).run();
   return json({ ok: true });
-}
-
-// Images are immutable once stored, so browsers and Cloudflare may cache them for a long time.
-async function serveImage(env, id) {
-  const object = await env.IMAGES.get(`${id}.jpg`);
-  if (!object) return new Response("Not found", { status: 404 });
-  return new Response(object.body, {
-    headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=31536000, immutable" },
-  });
 }
 
 function voteStatement(env, id, judgedAI) {

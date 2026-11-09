@@ -1,4 +1,4 @@
-"""PENCILSLOP catalog ingest: grows the catalog with no manual review.
+"""PENCILSLOP catalog ingest: grows the catalog with no manual review, at no cost.
 
 Each run:
   1. Fetches candidates: human paintings from the Art Institute of Chicago
@@ -7,29 +7,28 @@ Each run:
      (AI only), image type, near-square shape, no "not artwork" title words.
   3. Normalizes every image the same way (RGB, centre-cropped 640 px square,
      JPEG quality 82, no metadata) so shape and file properties can't reveal
-     the answer.
-  4. Screens the normalized image with Claude (SCREEN_MODEL) against the
-     fairness checklist in SCREEN_PROMPT.
-  5. Stores passing images in R2 and the D1 `images` table; records every
-     refused source in D1 `rejected` so it is never fetched again.
+     the answer, and saves it to public/img/<id>.jpg.
+  4. With --remote, publishes in a safe order: commit and push the new images,
+     deploy the Worker, and only then add their rows to D1. A round can then
+     never point at an image the live site doesn't have.
+  5. Records every refused source in D1 `rejected` so it is never fetched again.
 
-D1 is the source of truth for the catalog. Players' reports (see the Worker)
-hide images that slip through. All storage goes through Wrangler, so the same
-script runs locally (logged-in Wrangler) and in GitHub Actions
-(CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID). Screening needs
-ANTHROPIC_API_KEY.
+D1 is the source of truth for the catalog. Rules can't catch everything (e.g.
+photorealism or a textless watermark), so players' reports hide images that
+slip through (see the Worker). All database access goes through Wrangler, so the
+same script runs locally (logged-in Wrangler) and in GitHub Actions
+(CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID).
 
 Usage:
-  python scripts/ingest.py --remote --human 10 --ai 5     add up to N new of each
-  python scripts/ingest.py --local ...                    same, against local dev storage
+  python scripts/ingest.py --remote --human 10 --ai 5     add up to N new of each and publish
+  python scripts/ingest.py --local --human 3 --ai 3       same against local dev storage (no publish)
   python scripts/ingest.py --remote --reject ID "REASON"  hide an image and block its source
   python scripts/ingest.py --remote --recheck-ai          re-verify AI evidence of active AI images
-  python scripts/ingest.py --remote --import-legacy       one-off: move the Phase 2 catalog
-                                                          (db/catalog.json) into D1/R2
+  python scripts/ingest.py --remote --import-legacy       one-off: load db/catalog.json and
+                                                          db/rejected.json (Phase 2) into D1
 """
 
 import argparse
-import base64
 import html
 import io
 import json
@@ -44,25 +43,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import List
 
-import anthropic
 from PIL import Image
-from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
+IMG_DIR = ROOT / "public" / "img"
 DB_NAME = "pencilslop"
-BUCKET = "pencilslop-images"
 
 USER_AGENT = "PENCILSLOP-class-project/0.2 (njk796@eid.utexas.edu)"
 SQUARE_SIDE = 640          # every image is stored at exactly this size
 MAX_ASPECT = 1.6           # skip images wider or taller than this before cropping
 JPEG_QUALITY = 82
 DOWNLOAD_PAUSE_S = 1.0     # be polite to the museum and Commons servers
-SCREEN_MODEL = "claude-haiku-5-5"
 
 FREE_LICENSE = re.compile(r"^(public domain|pd|cc0|cc by(-sa)? [0-9.]+)", re.I)
-# Titles that name something other than an artwork. Cheap pre-filter before screening.
+# Titles that name something other than an artwork.
 NOT_ARTWORK_TITLE = re.compile(
     r"\b(screenshot|poster|diagram|infographic|logo|cover|chart|map|flag|icon|meme|"
     r"interface|banner|thumbnail|comparison|collage|grid)\b", re.I
@@ -95,22 +90,25 @@ def strip_html(s):
 
 
 # --------------------------------------------------------------------------
-# Storage (D1 + R2 via Wrangler)
+# Storage: D1 via Wrangler; images are files in public/img published by git + deploy
+
+def run(cmd):
+    out = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+    if out.returncode != 0:
+        raise RuntimeError(f"{' '.join(cmd[:4])} failed:\n{out.stdout}\n{out.stderr}")
+    return out.stdout
+
 
 class Store:
     def __init__(self, target):
-        self.flag = f"--{target}"                       # --local or --remote
+        self.target = target                            # "local" or "remote"
         self.npx = shutil.which("npx") or "npx"
 
-    def _wrangler(self, *args):
-        cmd = [self.npx, "wrangler", *args]
-        out = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
-        if out.returncode != 0:
-            raise RuntimeError(f"wrangler {' '.join(args[:3])} failed:\n{out.stdout}\n{out.stderr}")
-        return out.stdout
+    def wrangler(self, *args):
+        return run([self.npx, "wrangler", *args])
 
-    def query(self, sql):
-        out = self._wrangler("d1", "execute", DB_NAME, self.flag, "--json", "--command", sql)
+    def query(self, sql_text):
+        out = self.wrangler("d1", "execute", DB_NAME, f"--{self.target}", "--json", "--command", sql_text)
         return json.loads(out)[0]["results"]
 
     def execute(self, statements):
@@ -120,18 +118,16 @@ class Store:
         with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False, encoding="utf-8") as f:
             f.write("\n".join(statements))
         try:
-            self._wrangler("d1", "execute", DB_NAME, self.flag, "--file", f.name, "-y")
+            self.wrangler("d1", "execute", DB_NAME, f"--{self.target}", "--file", f.name, "-y")
         finally:
             Path(f.name).unlink()
 
-    def put_image(self, image_id, jpeg_bytes):
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
-            f.write(jpeg_bytes)
-        try:
-            self._wrangler("r2", "object", "put", f"{BUCKET}/{image_id}.jpg",
-                           "--file", f.name, "--content-type", "image/jpeg", self.flag)
-        finally:
-            Path(f.name).unlink()
+    def publish_images(self, count):
+        """Commit and push new images, then deploy, so they are live before any row points at them."""
+        run(["git", "add", "public/img"])
+        run(["git", "commit", "-m", f"Ingest: add {count} artwork images"])
+        run(["git", "push"])
+        self.wrangler("deploy")
 
     def known_sources(self):
         rows = self.query("SELECT source_url FROM images UNION SELECT source_url FROM rejected")
@@ -269,8 +265,8 @@ def ai_candidates_in(category):
 
 
 def ai_entry(page):
-    """Candidate entry for a Commons file. Rule failures are carried in 'rule_failure'
-    so they get recorded as rejections."""
+    """Candidate entry for a Commons file. A rule failure is carried in 'rule_failure'
+    so it gets recorded as a rejection."""
     info = page["imageinfo"][0]
     meta = info.get("extmetadata", {})
     license_name = meta.get("LicenseShortName", {}).get("value", "")
@@ -294,9 +290,9 @@ def ai_entry(page):
 
 
 # --------------------------------------------------------------------------
-# Normalization and screening
+# Normalization
 
-def normalize(raw_bytes):
+def normalize(raw_bytes, out_path):
     """Identical shape, size, format, and quality for every image; saving fresh drops all metadata."""
     img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
     w, h = img.size
@@ -305,64 +301,17 @@ def normalize(raw_bytes):
     side = min(w, h)
     left, top = (w - side) // 2, (h - side) // 2
     img = img.crop((left, top, left + side, top + side)).resize((SQUARE_SIDE, SQUARE_SIDE), Image.Resampling.LANCZOS)
-    out = io.BytesIO()
-    img.save(out, "JPEG", quality=JPEG_QUALITY, optimize=True)
-    return out.getvalue()
-
-
-SCREEN_PROMPT = """You are screening images for a game where players see two artworks and guess
-which ones are AI-generated. Some images are human-made paintings, some are AI-generated.
-Do NOT judge whether this image is AI. Judge only whether it is a fair, appropriate game image.
-
-The image FAILS if any of these apply:
-- photo: it is a photograph or looks photorealistic (like a camera photo) rather than a painting, drawing, or illustration
-- text: it contains visible text, letters, numbers, captions, labels, or user-interface elements
-- watermark: it has a watermark, logo, signature badge, or generator mark (e.g. a row of colored squares in a corner)
-- frame: it shows a picture frame, mat, border, or is several panels or a grid of images
-- not_artwork: it is a diagram, chart, map, infographic, screenshot, product shot, or document
-- real_person: it shows an identifiable real public figure (politician, celebrity, religious leader) in an invented scene
-- sexual: it is sexually suggestive or explicit (non-sexual nudity in classical art is acceptable)
-- graphic: it shows gore or graphic violence
-
-If none apply, it PASSES. List every rule that fails by its short name."""
-
-
-class Screening(BaseModel):
-    passes: bool
-    failed_rules: List[str]
-    reason: str
-
-
-def screen(client, jpeg_bytes):
-    """Return (passes, note). A refusal or unparseable answer counts as a failure."""
-    response = client.messages.parse(
-        model=SCREEN_MODEL,
-        max_tokens=2048,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
-                                             "data": base64.standard_b64encode(jpeg_bytes).decode()}},
-                {"type": "text", "text": SCREEN_PROMPT},
-            ],
-        }],
-        output_format=Screening,
-    )
-    if response.stop_reason == "refusal" or response.parsed_output is None:
-        return False, "Screening model refused or gave no verdict"
-    v = response.parsed_output
-    passed = v.passes and not v.failed_rules
-    note = f"{SCREEN_MODEL}: " + ("passed" if passed else "failed " + ", ".join(v.failed_rules)) + f" ({v.reason})"
-    return passed, note
+    img.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
 
 
 # --------------------------------------------------------------------------
 # Commands
 
-def ingest(store, candidates, wanted, screen_client, known):
-    """Add up to `wanted` new images from `candidates`. Rejections are written in
-    batches (each Wrangler call takes seconds); the finally block flushes the rest."""
-    added, refused = 0, []
+def ingest(store, candidates, wanted, known):
+    """Save up to `wanted` new images to public/img and return their D1 rows (not
+    yet inserted). Rejections are written in batches, since each Wrangler call
+    takes seconds; the finally block flushes the rest."""
+    rows, refused = [], []
 
     def refuse(c, reason):
         refused.append(insert_rejected(c["source_url"], c["title"], reason))
@@ -372,7 +321,7 @@ def ingest(store, candidates, wanted, screen_client, known):
 
     try:
         for c in candidates:
-            if added >= wanted:
+            if len(rows) >= wanted:
                 break
             if c["source_url"] in known:
                 continue
@@ -385,9 +334,10 @@ def ingest(store, candidates, wanted, screen_client, known):
                 refuse(c, failure)
                 continue
 
+            image_id = secrets.token_hex(8)
             try:
                 time.sleep(DOWNLOAD_PAUSE_S)
-                jpeg = normalize(http_get(c.pop("download_url")))
+                normalize(http_get(c.pop("download_url")), IMG_DIR / f"{image_id}.jpg")
             except ValueError as err:              # shape rule: permanent, record it
                 refuse(c, str(err))
                 continue
@@ -395,24 +345,12 @@ def ingest(store, candidates, wanted, screen_client, known):
                 print(f"  skip (will retry later) {c['source_url']}: {err}")
                 continue
 
-            try:
-                passed, note = screen(screen_client, jpeg)
-            except anthropic.APIError as err:      # API trouble: try again another night
-                print(f"  skip (screening unavailable) {c['source_url']}: {err}")
-                continue
-            if not passed:
-                refuse(c, note)
-                print(f"  - {'AI   ' if c['is_ai'] else 'human'} {c['title'][:50]}  [{note}]")
-                continue
-
-            image_id = secrets.token_hex(8)
-            store.put_image(image_id, jpeg)        # image first: a row never points at a missing file
-            store.execute([insert_image({**c, "id": image_id, "added_at": int(time.time() * 1000), "screening": note})])
-            added += 1
+            rows.append(insert_image({**c, "id": image_id, "added_at": int(time.time() * 1000),
+                                      "screening": "fixed rules (automatic)"}))
             print(f"  + {'AI   ' if c['is_ai'] else 'human'} {image_id}  {c['title'][:50]}")
     finally:
         store.execute(refused)
-    return added
+    return rows
 
 
 def reject(store, image_id, reason):
@@ -439,15 +377,10 @@ def recheck_ai(store):
 
 
 def import_legacy(store):
-    """One-off migration of the Phase 2 catalog (db/catalog.json, with images moved
-    to scripts/raw/legacy-img/) into D1 and R2. INSERT OR IGNORE keeps rows (and
-    votes) that already exist."""
+    """One-off: load the Phase 2 catalog records into D1. INSERT OR IGNORE keeps
+    rows (and votes) that already exist."""
     catalog = json.loads((ROOT / "db/catalog.json").read_text(encoding="utf-8"))
     rejected = json.loads((ROOT / "db/rejected.json").read_text(encoding="utf-8"))
-    for i, e in enumerate(catalog, 1):
-        store.put_image(e["id"], (ROOT / "scripts/raw/legacy-img" / f"{e['id']}.jpg").read_bytes())
-        if i % 25 == 0:
-            print(f"  uploaded {i}/{len(catalog)}", flush=True)
     store.execute([insert_image({**e, "screening": "manual review (Phase 2)"}) for e in catalog]
                   + [insert_rejected(r["source_url"], r["title"], r["reason"]) for r in rejected])
     print(f"  imported {len(catalog)} images and {len(rejected)} rejections")
@@ -466,6 +399,7 @@ def main():
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # titles include non-Latin text
+    IMG_DIR.mkdir(parents=True, exist_ok=True)
     store = Store(args.target)
 
     if args.import_legacy:
@@ -475,12 +409,16 @@ def main():
     elif args.recheck_ai:
         recheck_ai(store)
     else:
-        client = anthropic.Anthropic()        # reads ANTHROPIC_API_KEY
         known = store.known_sources()
         print("Human art (Art Institute of Chicago):")
-        ingest(store, human_candidates(), args.human, client, known)
+        rows = ingest(store, human_candidates(), args.human, known)
         print("AI art (Wikimedia Commons):")
-        ingest(store, ai_candidates(), args.ai, client, known)
+        rows += ingest(store, ai_candidates(), args.ai, known)
+        if rows:
+            if args.target == "remote":
+                print(f"Publishing {len(rows)} images (git push, deploy)...", flush=True)
+                store.publish_images(len(rows))
+            store.execute(rows)                # rows last: images are already live
 
     human, ai = store.counts()
     print(f"Active catalog: {human} human, {ai} AI")
