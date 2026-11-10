@@ -1,3 +1,204 @@
+commit a99cfaf769f3f9e038db49ec4ad549f07e27a836
+Date:   2026-11-10 17:32:40 -0600
+Author: Niko Kahler
+
+Save Phase 2 transcript
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 86b8cb7bfefd08acf781bbecaeba79cdf091d9cd
+Date:   2026-11-10 17:27:20 -0600
+Author: Niko Kahler
+
+Ingest: identify by repo URL instead of a personal email in the User-Agent
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit bd12c544af369d659152d2272950a780d002e9df
+Date:   2026-11-09 23:04:38 -0600
+Author: Niko Kahler
+
+Logo on the page, free image checks, remove obsolete catalog files
+
+- Full logo on the start screen; new mark-only logo (branding/logo-mark.svg)
+  in the header and as the favicon
+- ingest.py: near-duplicate check (64-bit dHash, threshold 6) and text
+  check (Tesseract, sparse text, 3+ confident words), calibrated on known
+  rejects and the catalog (0 false positives on 256 paintings);
+  --recheck-images applies them to the active catalog; --import-legacy
+  removed (one-off done)
+- migration 0003: images.phash; applied live, all 255 active images hashed,
+  none hidden
+- Workflow installs Tesseract; requirements add pytesseract
+- Removed db/catalog.json, db/seed.sql, db/rejected.json (now in D1) and
+  fixed npm scripts that still pointed at them
+- Docs: spec, plan, research, AGENTS
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit dde211746858436fc37d0c607429143d73ef5f52
+Date:   2026-11-09 17:52:07 -0600
+Author: Niko Kahler
+
+Docs: spec, plan, research, AGENTS for the free automated pipeline
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit a00a7f020f9d106f3b1ca2c3527ec10edaaf815f
+Date:   2026-11-09 17:50:17 -0600
+Author: Niko Kahler
+
+Ingest: add 2 artwork images
+
+----------------------------------------
+commit 027a1c4ca6fd274fdd6f38e86d19e9b13ae5c422
+Date:   2026-11-09 17:48:21 -0600
+Author: Niko Kahler
+
+Switch pipeline to the free design: no R2, no paid screening
+
+The Developer has no budget. R2 may require a card and the Claude API is
+paid, so:
+- Images stay in public/img as Worker static assets (free plan, no card)
+- ingest.py: fixed rules only; with --remote it commits and pushes new
+  images, deploys, then inserts D1 rows, so rows never point at missing files
+- Workflow: no Anthropic key; contents: write to push images
+- Worker: R2 route and binding removed; reports and auto-hide unchanged
+- Live: migrations 0001-0002 applied (votes kept), 58 rejections imported
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 87b54840ba2728854bcdb0363e6f0636eec64c21
+Date:   2026-11-09 17:18:32 -0600
+Author: Niko Kahler
+
+Automated catalog pipeline: R2 images, D1 source of truth, reports
+
+- migrations/: switch to Wrangler D1 migrations; 0002 adds images.active,
+  reports, added_at, screening, plus rejected and reports tables
+- Worker: serve /img/<id>.jpg from R2, serve only active images,
+  POST /api/report (answered rounds only, once per image per round,
+  image hidden at 3 reports)
+- Reveal: per-image Report button
+- scripts/ingest.py (was build_catalog.py): fixed rules, then Claude
+  screening (claude-haiku-5-5, structured verdict), then R2 + D1;
+  every refusal recorded in D1 rejected; --import-legacy one-off migration
+- .github/workflows/nightly-ingest.yml: nightly run on GitHub Actions
+- Bundled images moved out of public/ (now served from R2)
+
+Tested locally: migrations, legacy import (254 images, 58 rejections),
+R2 image route, report endpoint, auto-hide at 3, report button in Edge.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 742935c670aaf6684784963ce86e9add57b43422
+Date:   2026-11-09 17:01:56 -0600
+Author: Niko Kahler
+
+Grow catalog to 192 human / 62 AI with paging and rate-limit retry
+
+- build_catalog.py: page through AIC results and Commons categories, add
+  generator categories, pause between downloads, retry on HTTP 429
+- Reviewed by eye: 46 rejected (photorealistic, text/diagrams, duplicates,
+  watermark, frames, two real-person deepfakes, one sexualized image)
+- Live database reset and reloaded with this catalog; redeployed
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 9791f8c71a4d8d3975b555064861dde5a84f3245
+Date:   2026-11-09 16:48:49 -0600
+Author: Niko Kahler
+
+Require explicit AI evidence on the file page, not category membership
+
+The Developer couldn't confirm one AI image. Audit: 4 of 10 AI images had
+no AI statement on their Commons page, only a user-editable category.
+
+- build_catalog.py: accept an AI image only if its page names a generator
+  or carries the PD-algorithm template; store that exact evidence
+- --recheck-ai applies the rule to existing entries (rejected the same 4)
+- Replacements reviewed by eye; a screenshot and a photo-style image were
+  also rejected. Catalog: 10 human / 10 AI, all AI with recorded evidence
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 258de67d6a42b174e2a2c70d9775aef72acb8405
+Date:   2026-11-09 16:29:59 -0600
+Author: Niko Kahler
+
+Plan: record deployment and live test results
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 52be36a2704dec24e32eea55e40a84b27015dbbe
+Date:   2026-11-09 16:29:21 -0600
+Author: Niko Kahler
+
+Point wrangler config at the remote D1 database
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit c7463aed0e3714c4b572c55cf65e8ceba85f9d2f
+Date:   2026-11-09 16:09:05 -0600
+Author: Niko Kahler
+
+Plan: mark seed image review done
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 2b067aef5a3603221112e8ae8e48f2e0446caaaf
+Date:   2026-11-09 16:08:53 -0600
+Author: Niko Kahler
+
+Review seed images: reject 6, add rejection list to catalog script
+
+- build_catalog.py --reject ID REASON removes an entry, moves its file to
+  scripts/raw/rejected/, and records the source in db/rejected.json so it
+  is never re-fetched
+- Rejected: 2 DALL-E-watermarked, 3 non-artworks, 1 framed photo
+- Catalog topped back up to 10 human / 10 AI
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 8372e3accb05175de43754ab8cc302668e0d867b
+Date:   2026-11-09 15:58:40 -0600
+Author: Niko Kahler
+
+Phase 2: MVP game loop with Worker API, D1 schema, seed catalog
+
+- src/worker.js: /api/round serves a pair with no answer; /api/answer checks
+  on the server, enforces the timer, rejects repeats, records votes, reveals
+- public/: game page with 10 s timer, streak, local personal best, reveal
+  with credits and crowd percentages; art-first quiz-show layout
+- db/schema.sql, db/catalog.json, db/seed.sql; scripts/build_catalog.py
+  fetches CC0 AIC paintings and freely licensed Commons AI images and
+  normalizes all to 640x640 JPEG so shape and metadata can't leak answers
+- spec.md, plan.md, research.md: Phase 2 spec, checkpoints, test evidence
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
+commit 78374ca230410118a4254a587a337f1aadeaf1fb
+Date:   2026-11-06 18:04:35 -0600
+Author: Niko Kahler
+
+Export commit log for Phase 1 snapshot
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+----------------------------------------
 commit 275d85ad81312d32dd415bbeaae2ffab066965d8
 Date:   2026-11-06 18:04:34 -0600
 Author: Niko Kahler
