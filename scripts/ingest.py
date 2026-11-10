@@ -55,7 +55,8 @@ ROOT = Path(__file__).resolve().parent.parent
 IMG_DIR = ROOT / "public" / "img"
 DB_NAME = "pencilslop"
 
-USER_AGENT = "PENCILSLOP-class-project/0.2 (njk796@eid.utexas.edu)"
+# Identifies the client to the museum and Commons APIs; the repo URL is the contact point.
+USER_AGENT = "PENCILSLOP-class-project/0.2 (+https://github.com/inkinvader/PencilSlop)"
 SQUARE_SIDE = 640          # every image is stored at exactly this size
 MAX_ASPECT = 1.6           # skip images wider or taller than this before cropping
 JPEG_QUALITY = 82
