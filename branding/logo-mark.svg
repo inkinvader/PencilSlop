@@ -1,0 +1,63 @@
+<!-- Mark-only variant of branding/logo.svg (no wordmark), for small sizes: header and favicon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 30 432 432" width="432" height="432" role="img" aria-labelledby="title">
+  <title id="title">PENCILSLOP mark: a giant pencil stabbed into a robot head</title>
+
+  <!-- Background tile -->
+  <rect x="40" y="30" width="432" height="432" rx="72" fill="#3B1C8C"/>
+
+  <!-- Artwork group, scaled about the centre so the pencil fits the tile -->
+  <g transform="translate(256 270) scale(0.85) translate(-256 -270)">
+
+  <!-- Robot: antenna, ears, head -->
+  <g stroke="#1E1240" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">
+    <line x1="215" y1="200" x2="215" y2="150"/>
+    <circle cx="215" cy="138" r="16" fill="#FF3D7F"/>
+    <rect x="120" y="270" width="34" height="70" rx="10" fill="#9AA6B8"/>
+    <rect x="386" y="270" width="34" height="70" rx="10" fill="#9AA6B8"/>
+    <rect x="150" y="200" width="240" height="220" rx="36" fill="#C9D3E0"/>
+
+    <!-- Eyes: knocked-out X on the left, shocked wide eye on the right -->
+    <line x1="190" y1="262" x2="230" y2="302"/>
+    <line x1="230" y1="262" x2="190" y2="302"/>
+    <circle cx="300" cy="282" r="24" fill="#FFFFFF"/>
+    <circle cx="300" cy="282" r="8" fill="#1E1240" stroke="none"/>
+
+    <!-- Mouth grille -->
+    <rect x="190" y="340" width="160" height="44" rx="10" fill="#1E1240"/>
+  </g>
+  <g stroke="#C9D3E0" stroke-width="6">
+    <line x1="222" y1="346" x2="222" y2="378"/>
+    <line x1="254" y1="346" x2="254" y2="378"/>
+    <line x1="286" y1="346" x2="286" y2="378"/>
+    <line x1="318" y1="346" x2="318" y2="378"/>
+  </g>
+
+  <!-- Impact: puncture hole and cracks where the pencil enters -->
+  <ellipse cx="330" cy="236" rx="20" ry="14" fill="#1E1240" transform="rotate(-55 330 236)"/>
+  <g stroke="#1E1240" stroke-width="5" stroke-linecap="round" fill="none">
+    <polyline points="312,250 292,262 284,282"/>
+    <polyline points="318,222 300,212"/>
+    <polyline points="344,252 352,272 368,278"/>
+  </g>
+
+  <!-- Pencil: drawn pointing left from its tip, then rotated so it plunges
+       down-left into the robot. The graphite tip is omitted so the pencil
+       reads as buried in the head. -->
+  <g transform="translate(330 236) rotate(-55)" stroke="#1E1240" stroke-width="8" stroke-linejoin="round">
+    <polygon points="12,-10 60,-26 60,26 12,10" fill="#F5D7A1"/>
+    <rect x="60" y="-26" width="160" height="52" fill="#FFC31F"/>
+    <line x1="60" y1="-9" x2="220" y2="-9" stroke="#E0A000" stroke-width="5"/>
+    <line x1="60" y1="9" x2="220" y2="9" stroke="#E0A000" stroke-width="5"/>
+    <rect x="220" y="-26" width="24" height="52" fill="#B8C0CC"/>
+    <rect x="244" y="-26" width="32" height="52" rx="10" fill="#FF8FB1"/>
+  </g>
+
+  <!-- Impact sparks -->
+  <g stroke="#FFE45C" stroke-width="7" stroke-linecap="round">
+    <line x1="376" y1="196" x2="404" y2="176"/>
+    <line x1="384" y1="230" x2="416" y2="232"/>
+    <line x1="286" y1="194" x2="268" y2="170"/>
+  </g>
+
+  </g>
+</svg>

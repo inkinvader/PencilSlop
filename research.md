@@ -35,7 +35,11 @@ When you begin this step, start a fresh chat so its transcript stays clean. For 
   - Claude API screening (Haiku 5.5, about $0.0001 per image) was built and then removed: there is no free tier.
   - R2 was dropped: it may require a card (not verified).
   - The Workers free plan's 10 ms CPU limit rules out image processing in a Cloudflare cron, so the nightly job runs on GitHub Actions.
-- **Free screening options not yet adopted**: Tesseract OCR in the nightly job (catches text, diagrams, covers, and worded watermarks), and a perceptual-hash duplicate check with Pillow (catches near-duplicates). The rules-only test ingest let one of each through.
+- **Free image checks adopted** (Developer, 2026-11-09). The rules-only test ingest had let a text image and a near-duplicate through. Calibration (evidence):
+  - Duplicate check (64-bit dHash): the known near-duplicate scored 1 bit from its original; the closest genuinely different catalog pair scored 10. Threshold set at 6.
+  - Text check (Tesseract 5.4; sparse-text mode, 2× upscale, word confidence 85 or more, 3 or more alphabetic words): it flagged 8 of the 10 earlier rejects that contain text and none of the 49 other rejects. It produced **0 false positives on 256 catalog paintings**. It missed a stylized book-cover title and a handwritten sign, which are left to player reports.
+  - The settings didn't change between confidence 80 and 85, between 3 and 4 words, or between psm 11 and 12.
+  - The live re-check hid none of the 255 active images and stored all their hashes.
 
 ## Scope
 
@@ -50,6 +54,7 @@ None.
 ## Sources and credits
 
 - Wrangler (Cloudflare CLI), MIT/Apache-2.0: https://github.com/cloudflare/workers-sdk
-- Pillow (image processing in the build script), MIT-CMU license: https://python-pillow.org
-- Art Institute of Chicago API and CC0 images: https://api.artic.edu/docs/. Each work's credit and link are in `db/catalog.json` and shown in the game.
-- Wikimedia Commons AI-generated images, under each file's license (public domain, CC0, CC BY, or CC BY-SA). Each work's credit, license, and link are in `db/catalog.json` and shown in the game.
+- Pillow (image processing in the ingest script), MIT-CMU license: https://python-pillow.org
+- Tesseract OCR (text check), Apache-2.0: https://github.com/tesseract-ocr/tesseract; pytesseract wrapper, Apache-2.0: https://github.com/madmaze/pytesseract
+- Art Institute of Chicago API and CC0 images: https://api.artic.edu/docs/. Each work's credit and link are stored in the D1 `images` table and shown in the game.
+- Wikimedia Commons AI-generated images, under each file's license (public domain, CC0, CC BY, or CC BY-SA). Each work's credit, license, and link are stored in the D1 `images` table and shown in the game.

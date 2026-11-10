@@ -28,7 +28,7 @@ Phase 2:
 4. [x] Game page: timer, streak, best, and reveal, tested in headless Edge on desktop and phone sizes.
 5. [x] Seed image review. The Developer delegated the choice; the Agent rejected 6 images, listed with reasons in `db/rejected.json`: 2 with DALL·E watermarks, 3 non-artworks (infographics, a photograph), and 1 framed photo that hints human. Replacements were fetched and checked by eye.
 6. [x] Deploy: Cloudflare login, create the remote D1 database, load the schema and seed, `wrangler deploy`. Live at https://pencilslop.pencilslop.workers.dev
-7. [ ] Two-device test on the public URL, plus a network check in DevTools.
+7. [x] Phone test on the public URL. The Developer confirmed "it works on phone" (2026-11-09). The network check was done by the Agent in headless Edge: the browser's round response holds no answer. A Developer DevTools check is still open.
 
 Phase 2, automated catalog (approved 2026-11-09):
 
@@ -36,6 +36,8 @@ Phase 2, automated catalog (approved 2026-11-09):
 9. [x] Worker: serve active images only; `/api/report` with auto-hide at 3 reports.
 10. [x] `scripts/ingest.py` (fixed rules, publish order) and the nightly workflow.
 11. [ ] Developer: create a Cloudflare API token and add the two GitHub secrets, then trigger one manual workflow run.
+12. [x] Logo on the page: full logo on the start screen, mark-only version in the header and browser tab (checked in headless Edge).
+13. [x] Free image checks: near-duplicate (dHash) and text (Tesseract), calibrated, in ingest and `--recheck-images`; migration 0003 applied live. Obsolete `db/` files removed.
 
 ## Testing and evidence
 

@@ -34,6 +34,8 @@ Approved for Phase 2:
 | Reports | After a round is answered, each image has a Report button. One report counts per image per round; reporting before answering is refused (409). At 3 reports an image stops being served. |
 | Catalog growth | A nightly job adds new images with no manual review, using only the fixed rules below. There is no set catalog size. |
 | Fixed catalog rules | Human: AIC public-domain painting. AI: the Commons file page names a generator or carries `{{PD-algorithm}}`. Both: free license, JPEG/PNG/WebP, no more than 1.6:1 before the square crop, no "not artwork" title words. Every refused source is recorded and never fetched again. |
+| Image checks | After normalization: refused if its dHash is within 6 bits of any stored image (near-duplicate), or if Tesseract reads 3 or more confident words (text). `--recheck-images` applies the same checks to the active catalog. |
+| Logo | The full logo is on the start screen; the mark-only version is in the header and the browser tab. |
 | Cost | The whole system runs on free tiers with no payment method: Cloudflare Workers + D1 and GitHub Actions. |
 
 Provisional, not yet specified: difficulty tiers, avoiding repeat images within a run, branding polish, accessibility pass, phone layout refinements.
@@ -52,7 +54,8 @@ Browser (public/: index.html, game.js, style.css, img/<id>.jpg)
 Worker (src/worker.js) --> D1 database "pencilslop" (images, rounds, reports, rejected)
 
 Nightly (GitHub Actions, .github/workflows/nightly-ingest.yml):
-  scripts/ingest.py: fetch candidates -> fixed rules -> normalize to public/img/
+  scripts/ingest.py: fetch candidates -> fixed rules -> normalize -> image checks
+                     (duplicate hash, OCR text) -> save to public/img/
                      -> git commit + push -> wrangler deploy -> insert D1 rows
 ```
 
@@ -64,7 +67,6 @@ Nightly (GitHub Actions, .github/workflows/nightly-ingest.yml):
 - **D1 `reports`**: one row per (round, image) report. `images.reports` is the running count.
 - **`public/img/`**: the image files, committed to git and deployed as static assets. A file without an `images` row is never served in a round.
 - **Browser**: only the current streak, the timer, and the personal best (`localStorage`).
-- `db/catalog.json`, `db/seed.sql`, `db/rejected.json`: Phase 2 records, imported into D1 on 2026-11-09 and no longer read.
 
 ### Interaction loop
 
@@ -77,6 +79,7 @@ Play → `POST /api/round` (active images only) → load both images → timer s
 - Left and right answers sit under their image (2×2 grid on phones).
 - Reveal borders: green for human, red for AI.
 - Every image goes through the same normalization in `ingest.py`: a 640×640 centre crop, JPEG quality 82, no metadata.
+- Logo: `branding/logo.svg` (full, with wordmark) and `branding/logo-mark.svg` (mark only, for small sizes) are the masters. `public/logo.svg` and `public/logo-mark.svg` are the served copies; update both together.
 
 ### Structure rules
 

@@ -36,7 +36,10 @@ body {
   background: var(--ink);
   font-size: 1.1rem;
 }
-.wordmark { font-weight: 900; margin-right: auto; letter-spacing: 1px; }
+.brand { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+.brand-logo { height: 40px; width: auto; display: block; }
+.wordmark { font-weight: 900; letter-spacing: 1px; }
+.hero-logo { width: min(220px, 50vw); height: auto; display: block; margin: 0 auto; }
 .pencil { color: var(--pencil); }
 .slop { color: var(--metal); }
 .timer {

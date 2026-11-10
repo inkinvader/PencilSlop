@@ -4,12 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PENCILSLOP</title>
+  <link rel="icon" href="logo-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- Top bar: streak, personal best, timer -->
   <header class="bar">
-    <span class="wordmark"><span class="pencil">PENCIL</span><span class="slop">SLOP</span></span>
+    <span class="brand">
+      <img class="brand-logo" src="logo-mark.svg" alt="">
+      <span class="wordmark"><span class="pencil">PENCIL</span><span class="slop">SLOP</span></span>
+    </span>
     <span>Streak <strong id="streak">0</strong></span>
     <span>Best <strong id="best">0</strong></span>
     <span class="timer" id="timer" aria-live="off">10</span>
@@ -18,6 +22,7 @@
   <main>
     <!-- Start screen -->
     <section id="start" class="panel">
+      <img class="hero-logo" src="logo.svg" alt="PENCILSLOP logo: a giant pencil stabbed into a robot head">
       <h1>Which one is AI?</h1>
       <p>Two artworks. Ten seconds. Left, right, both, or neither could be AI-generated. One wrong answer ends your run.</p>
       <button class="primary" id="start-btn">Play</button>
