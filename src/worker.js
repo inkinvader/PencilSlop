@@ -2,7 +2,7 @@
 // artwork images in public/img/) are served by Cloudflare's asset handler; only
 // /api/* requests reach this code.
 //
-//   POST /api/round   { streak } -> { roundId, left, right, seconds }   (no answer included)
+//   POST /api/round   { streak, seen } -> { roundId, left, right, seconds }   (no answer included)
 //   POST /api/answer  { roundId, choice } -> truth, credits, and prior crowd votes
 //   POST /api/report  { roundId, side }   -> flag an image from an answered round
 
@@ -10,7 +10,8 @@ const ROUND_SECONDS = 10;
 const GRACE_MS = 3000;                 // allowance for network latency on the timer
 const AI_CHANCE_MIN = 0.2;             // each round picks its AI chance in this range
 const AI_CHANCE_MAX = 0.6;
-const REPORTS_TO_HIDE = 3;             // an image with this many reports stops being served
+const REPORTS_TO_HIDE = 3;
+const MAX_SEEN = 300;                  // most image IDs a run can ask to skip             // an image with this many reports stops being served
 const CHOICES = ["left", "right", "both", "neither", "timeout"];
 
 // Difficulty: each slot picks a tier (1 easy, 2 medium, 3 hard; set by ingest.py)
@@ -41,18 +42,22 @@ export default {
 
 // Serve a new pair. Each slot is independently AI with this round's chance, and
 // independently picks a tier by the streak. The streak comes from the browser; a
-// faked streak only changes which images are shown, never the answer.
+// faked streak only changes which images are shown, never the answer. `seen` lists
+// the image IDs already shown this run, so a run doesn't repeat images.
 async function newRound(request, env) {
   const body = await request.json().catch(() => ({}));
   const streak = Number.isInteger(body.streak) && body.streak > 0 ? body.streak : 0;
+  const seen = Array.isArray(body.seen)
+    ? body.seen.filter((id) => typeof id === "string" && /^[0-9a-f]{16}$/.test(id)).slice(-MAX_SEEN)
+    : [];
   const odds = tierOdds(streak);
 
   const chance = AI_CHANCE_MIN + Math.random() * (AI_CHANCE_MAX - AI_CHANCE_MIN);
   const leftAI = Math.random() < chance;
   const rightAI = Math.random() < chance;
 
-  const left = await randomImage(env, leftAI, pickTier(odds), null);
-  const right = await randomImage(env, rightAI, pickTier(odds), left);
+  const left = await randomImage(env, leftAI, pickTier(odds), seen);
+  const right = await randomImage(env, rightAI, pickTier(odds), left ? [...seen, left] : seen);
   if (!left || !right) return json({ error: "Catalog too small" }, 500);
 
   const roundId = crypto.randomUUID();
@@ -82,13 +87,17 @@ function pickTier(odds) {
   return odds.length;
 }
 
-// A random active image of the given kind and tier. If that tier has none of
-// this kind yet, any tier is used, so a thin tier never breaks a round.
-async function randomImage(env, isAI, tier, excludeId) {
-  const row = await env.DB.prepare(
-    `SELECT id FROM images WHERE active = 1 AND is_ai = ? AND id != ?
+// A random active image of the given kind and tier, not in `excludeIds`. If that
+// tier has none of this kind, any tier is used, so a thin tier never breaks a
+// round. The exclusions go as one JSON parameter (D1 caps bound parameters at 100).
+// If a long run has seen every image of this kind, repeats are allowed again.
+async function randomImage(env, isAI, tier, excludeIds) {
+  const pick = (exclude) => env.DB.prepare(
+    `SELECT id FROM images WHERE active = 1 AND is_ai = ?
+       AND id NOT IN (SELECT value FROM json_each(?))
      ORDER BY (tier = ?) DESC, RANDOM() LIMIT 1`
-  ).bind(isAI ? 1 : 0, excludeId ?? "", tier).first();
+  ).bind(isAI ? 1 : 0, JSON.stringify(exclude), tier).first();
+  const row = (await pick(excludeIds)) ?? (await pick(excludeIds.slice(-1)));
   return row?.id ?? null;
 }
 

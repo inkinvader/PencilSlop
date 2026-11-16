@@ -46,7 +46,18 @@ Approved for Phase 3 (2026-11-16):
 | Difficulty ramp | The page sends its streak with `/api/round`. Each slot picks a tier with odds by streak (easy/medium/hard): 0 → 50/30/20, 5 → 30/45/25, 10 → 15/40/45, 15+ → 10/25/65, linear in between. If the tier has no image of the needed kind, any tier is used. A local run of 1,000 rounds per streak matches the odds within a few percent. |
 | Tier growth | The nightly human picks rotate through the three AIC groups, so each tier grows. |
 
-Provisional, not yet specified: museum redesign (next), avoiding repeat images within a run, accessibility pass.
+Approved for Phase 3, museum redesign (2026-11-16):
+
+| Behavior | Counts as working |
+|---|---|
+| Gallery look | Quartz wall, a gold frame per piece, red velvet curtains, wall labels, metal answer plaques (brass, bronze, copper, pewter, each a different finish). All drawn in CSS/SVG, no texture images. Logo recolored to the same palette. |
+| Curtain sequence | Start: curtains closed behind the start card. Play: the pair loads, curtains slide open, then the clock starts. After the answer the curtains stay open for the reveal. Next / Play again: curtains slide closed, labels clear, the next pair loads behind them, curtains open. The curtains always slide (Developer: slide, not fade, also with reduced motion). No artwork is visible before its curtain opens. |
+| Clock | Between the pieces: an analog face whose hand sweeps once over the 10 s, with the countdown number in the centre (red for the last 3 s). Desktop: streak above the clock, best below. Phone: streak left, best right. |
+| Layout | Desktop: frame, clock post, frame in one row; answers at the bottom; the round fits a 1280×800 window without scrolling. Phone (≤ 700 px): frame, clock strip, frame, stacked; answers 2×2, pinned to the bottom; the round fits 390×844, and the reveal may scroll. No horizontal scrolling. |
+| No repeats in a run | The page sends the IDs already shown this run (`seen`); the Worker skips them. Repeats are allowed again only if a run has seen every image of a kind. |
+| Accessibility | Keys L / ← left, R / → right, B both, N neither; visible focus ring; focus moves to Next after the reveal; round start and verdict announced to screen readers; text contrast at least 4.5:1; buttons at least 44 px tall; image alt text neutral until the reveal, then title and artist. |
+
+Provisional, not yet specified: data-driven difficulty (Phase 4).
 
 ## Architecture
 
@@ -74,18 +85,18 @@ Nightly (GitHub Actions, .github/workflows/nightly-ingest.yml):
 - **D1 `rounds`**: every served pair, its timestamp, and its choice once answered. This lets the server check answers and reject repeats.
 - **D1 `reports`**: one row per (round, image) report. `images.reports` is the running count.
 - **`public/img/`**: the image files, committed to git and deployed as static assets. A file without an `images` row is never served in a round.
-- **Browser**: only the current streak, the timer, and the personal best (`localStorage`).
+- **Browser**: only the current streak, the image IDs seen this run, the timer, and the personal best (`localStorage`).
 
 ### Interaction loop
 
-Play → `POST /api/round` (active images only) → load both images → timer starts → player chooses (or the timer ends) → `POST /api/answer` → the server checks, records votes, and returns the reveal → captions show the truth, credit, crowd percentages, and a Report button → Next (if correct) or Play again.
+Play → curtains closed → `POST /api/round` with streak and seen IDs (active images only) → load both images → curtains open → timer starts → player chooses (or the timer ends) → `POST /api/answer` → the server checks, records votes, and returns the reveal → captions show the truth, credit, crowd percentages, and a Report button → Next (if correct) or Play again → curtains close.
 
 ### Visual and content rules
 
-- Kahoot-inspired quiz-show look with the art first. Layout is a column: top bar (wordmark, streak, best, timer), then the artwork pair filling the remaining height, then a compact answer strip.
-- Colors are tokens in `public/style.css` (`--purple`, `--ink`, `--pencil`, `--metal`, and the four answer colors).
-- Left and right answers sit under their image (2×2 grid on phones).
-- Reveal borders: green for human, red for AI.
+- Museum gallery look with the art first (2026-11-16, replaces the Phase 2 quiz-show look). Layout is a column: top line (logo mark, wordmark), then the exhibit (frame, clock post, frame), then the console (answer plaques during a round, result after it). The layout model is described at the top of `public/style.css`; every artwork is a square of side `--art`.
+- Colors and sizes are tokens in `public/style.css` (`--wall`, `--ink`, `--gold`, `--velvet`, `--ai`, `--human`, ...).
+- Left and right answers sit at the outer ends of the plaque row (top row of the 2×2 grid on phones).
+- Reveal: a red ring and "AI-generated" label for AI, a green ring and "Human-made" for human. The label text means color is never the only cue.
 - Every image goes through the same normalization in `ingest.py`: a 640×640 centre crop, JPEG quality 82, no metadata.
 - Logo: `branding/logo.svg` (full, with wordmark) and `branding/logo-mark.svg` (mark only, for small sizes) are the masters. `public/logo.svg` and `public/logo-mark.svg` are the served copies; update both together.
 
@@ -99,6 +110,7 @@ Play → `POST /api/round` (active images only) → load both images → timer s
 
 ### Decisions and changes
 
+- **Museum redesign** (2026-11-16, Developer). Replaced the Kahoot-style look with a gallery: frames, curtains, a clock between the pieces. The pitch listed a gallery as one of its branding options.
 - **Rule-based tiers until votes exist** (2026-11-16, Developer). The pitch planned hand-assigned tiers, but the catalog grows with no manual review, and only 8 images had 3+ votes. Tiers come from source signals instead (museum popularity flags, AI upload year as a proxy for generator quality). Phase 4 is meant to re-rank by how often each image fooled players. Trade-off: upload year is only a rough stand-in for how convincing an AI image is.
 - **Single Worker with static assets** (2026-11-09). One deploy, no separate host.
 - **Square 640 px crop for all images** (2026-11-09). The first catalog showed every AI image was square and no human one was, which gave the answer away. Trade-off: the edges of non-square works are trimmed.

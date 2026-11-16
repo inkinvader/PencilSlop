@@ -41,11 +41,15 @@ Phase 2, automated catalog (approved 2026-11-09):
 
 Phase 3, difficulty tiers (approved 2026-11-16):
 
-14. [ ] Tiers by fixed rules in `ingest.py` (new images and `--retier`), streak-based odds in the Worker, streak sent by the page. Tested locally.
-15. [ ] Deploy, `--retier` on the live catalog, and check a live round.
+14. [x] Tiers by fixed rules in `ingest.py` (new images and `--retier`), streak-based odds in the Worker, streak sent by the page. Tested locally.
+15. [x] Deploy, `--retier` on the live catalog, and check a live round.
 16. [ ] Developer: play a run and judge whether the early rounds feel easier.
 
-Phase 3, museum redesign: spec to be approved.
+Phase 3, museum redesign (approved 2026-11-16), with repeat avoidance and an accessibility pass:
+
+17. [x] Gallery page: frames, curtains, clock post, wall labels, metal plaques, recolored logo. Worker skips images already seen in the run. Tested locally in headless Edge.
+18. [ ] Deploy and check the live page.
+19. [ ] Developer: play on desktop and phone and judge the look and the curtain timing.
 
 ## Testing and evidence
 
@@ -80,6 +84,22 @@ Phase 3, museum redesign: spec to be approved.
 - 1,000 rounds per streak, tiers of the AI slots served (target in brackets): streak 0: 49/31/20 (50/30/20); 5: 31/43/26 (30/45/25); 10: 14/39/47 (15/40/45); 15: 11/24/65 (10/25/65).
 - `/api/round` with no body or a non-number streak is served as streak 0.
 - The first 6 human candidates alternate tiers 1, 2, 3, 1, 2, 3.
+
+2026-11-16, difficulty tiers (live):
+- Deployed. `--retier --remote` set tiers on 258 of 259 images. A one-time `--human 30` added 19 famous (easy) and 11 rarely viewed (hard) works; 3 downloads returned HTTP 403 and will be retried. Nearly all early medium candidates were already in the catalog, so their turns went to easy and hard. Live human tiers: 19 / 195 / 11; AI: 20 / 20 / 23.
+- Live `/api/round` at streak 0 and 15 served pairs.
+
+2026-11-16, museum redesign (local, headless Edge at 1280×800 and 390×844):
+- The curtains start opening about 50–100 ms after Play. The drapes fully cover both artworks until then. The clock and answers start 940–970 ms after opening begins, when the drapes are fully clear (offset −231 px desktop, −129 px phone).
+- At 2.5 s the timer shows 8 and the hand is at about 90°.
+- Key N answered the round. Focus moved to Next. The wall labels showed the verdict, title, artist, votes, source and Report.
+- Next closed the curtains, cleared the labels and opened on a new pair.
+- Round layout: desktop page width 1280 (artwork 448 px, console bottom 740 of 800); phone width 390 (artwork 250 px, console bottom 817 of 844).
+- A first run found a 1344 px page width, caused by the spotlight glow, and visible seams in the wall texture. Both were fixed and re-checked.
+- Contrast: the bronze and copper plaques first measured 3.4–3.5:1 at their darkest corner. After darker text and lighter corner colors, every text pair measures 4.7:1 or more.
+- Developer feedback: "New best!" now shows only on the round that first passes the record held at the start of the run, and only when there was a record. Artwork bigger and clock smaller. Desktop: art 448 → 460 px, clock 136 → 96 px. Phone: art 250 → 272 px, clock 80 → 60 px. The wall labels were clipping their last line; their box is now sized to the content (118 of 118 px, no line clipped).
+- Local-only: 9 local D1 rows from old ingest tests have no image file, which shows a broken image locally. All 288 live active images have their files.
+- Repeats: one simulated 40-round run with `seen` served 80 of 80 unique images; without `seen`, 65 of 80. A junk `seen` list is ignored (200).
 
 ## Simplification reviews
 

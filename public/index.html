@@ -4,48 +4,82 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PENCILSLOP</title>
+  <meta name="theme-color" content="#efeae1">
   <link rel="icon" href="logo-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Top bar: streak, personal best, timer -->
-  <header class="bar">
-    <span class="brand">
-      <img class="brand-logo" src="logo-mark.svg" alt="">
-      <span class="wordmark"><span class="pencil">PENCIL</span><span class="slop">SLOP</span></span>
-    </span>
-    <span>Streak <strong id="streak">0</strong></span>
-    <span>Best <strong id="best">0</strong></span>
-    <span class="timer" id="timer" aria-live="off">10</span>
+  <header class="topline">
+    <img class="brand-logo" src="logo-mark.svg" alt="">
+    <span class="wordmark"><span class="pencil">PENCIL</span><span class="slop">SLOP</span></span>
   </header>
 
-  <main>
-    <!-- Start screen -->
-    <section id="start" class="panel">
-      <img class="hero-logo" src="logo.svg" alt="PENCILSLOP logo: a giant pencil stabbed into a robot head">
-      <h1>Which one is AI?</h1>
-      <p>Two artworks. Ten seconds. Left, right, both, or neither could be AI-generated. One wrong answer ends your run.</p>
-      <button class="primary" id="start-btn">Play</button>
-    </section>
+  <!-- Gallery room. Layout model (style.css): a column of
+       exhibit (frame | clock post | frame) → console (answers or result).
+       On phones the exhibit stacks: frame, clock strip, frame. -->
+  <main class="gallery">
+    <div class="exhibit" id="exhibit">
+      <figure class="piece" id="left-piece">
+        <div class="frame">
+          <div class="canvas">
+            <img id="left-img" alt="Left artwork">
+            <div class="curtain" aria-hidden="true"><span class="drape drape-l"></span><span class="drape drape-r"></span></div>
+          </div>
+        </div>
+        <figcaption class="placard" id="left-cap"></figcaption>
+      </figure>
 
-    <!-- Round: the two artworks dominate; answers are a compact strip below -->
-    <section id="round" hidden>
-      <div class="pair">
-        <figure class="art" id="left-fig"><img id="left-img" alt="Artwork A"><figcaption id="left-cap"></figcaption></figure>
-        <figure class="art" id="right-fig"><img id="right-img" alt="Artwork B"><figcaption id="right-cap"></figcaption></figure>
+      <!-- Clock post: current streak above, the round clock, best streak below -->
+      <div class="clockpost">
+        <div class="stat stat-streak"><span class="stat-label">Streak</span><strong id="streak">0</strong></div>
+        <div class="clock" role="timer" aria-label="Time left">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="clock-bezel" cx="60" cy="60" r="57"/>
+            <circle class="clock-face" cx="60" cy="60" r="50"/>
+            <g id="clock-ticks"></g>
+            <line class="clock-hand" id="clock-hand" x1="60" y1="60" x2="60" y2="17"/>
+            <circle class="clock-hub" cx="60" cy="60" r="19"/>
+          </svg>
+          <span class="clock-num" id="timer">10</span>
+        </div>
+        <div class="stat stat-best"><span class="stat-label">Best</span><strong id="best">0</strong></div>
       </div>
-      <div class="answers" id="answers">
-        <button class="ans a-left"    data-choice="left">▲ Left is AI</button>
-        <button class="ans a-both"    data-choice="both">◆ Both</button>
-        <button class="ans a-neither" data-choice="neither">● Neither</button>
-        <button class="ans a-right"   data-choice="right">■ Right is AI</button>
+
+      <figure class="piece" id="right-piece">
+        <div class="frame">
+          <div class="canvas">
+            <img id="right-img" alt="Right artwork">
+            <div class="curtain" aria-hidden="true"><span class="drape drape-l"></span><span class="drape drape-r"></span></div>
+          </div>
+        </div>
+        <figcaption class="placard" id="right-cap"></figcaption>
+      </figure>
+
+      <!-- Start screen: a card on the wall in front of the closed curtains -->
+      <section class="intro" id="start">
+        <img class="hero-logo" src="logo.svg" alt="PENCILSLOP logo: a giant pencil stabbed into a robot head">
+        <h1>Which one is AI?</h1>
+        <p>Two artworks. Ten seconds. Left, right, both, or neither could be AI-generated. One wrong answer ends your run.</p>
+        <button class="brass-btn" id="start-btn">Play</button>
+      </section>
+    </div>
+
+    <!-- Console: answer plaques during a round, the result after it -->
+    <div class="console">
+      <div class="answers" id="answers" hidden>
+        <button class="plaque p-brass"  data-choice="left"    aria-keyshortcuts="L ArrowLeft"><span class="sym" aria-hidden="true">▲</span> Left is AI<kbd aria-hidden="true">L</kbd></button>
+        <button class="plaque p-bronze" data-choice="both"    aria-keyshortcuts="B"><span class="sym" aria-hidden="true">◆</span> Both<kbd aria-hidden="true">B</kbd></button>
+        <button class="plaque p-copper" data-choice="neither" aria-keyshortcuts="N"><span class="sym" aria-hidden="true">●</span> Neither<kbd aria-hidden="true">N</kbd></button>
+        <button class="plaque p-pewter" data-choice="right"   aria-keyshortcuts="R ArrowRight"><span class="sym" aria-hidden="true">■</span> Right is AI<kbd aria-hidden="true">R</kbd></button>
       </div>
       <div class="result" id="result" hidden>
-        <p id="verdict" role="status"></p>
-        <button class="primary" id="next-btn">Next</button>
+        <p id="verdict"></p>
+        <button class="brass-btn" id="next-btn">Next</button>
       </div>
-    </section>
+    </div>
 
+    <!-- Screen-reader announcements (round start, verdict) -->
+    <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
     <p id="error" class="error" role="alert" hidden></p>
   </main>
 
