@@ -16,11 +16,11 @@
     <rect x="386" y="270" width="34" height="70" rx="10" fill="#9AA6B8"/>
     <rect x="150" y="200" width="240" height="220" rx="36" fill="#C9D3E0"/>
 
-    <!-- Eyes: knocked-out X on the left, shocked wide eye on the right -->
+    <!-- Eyes, mirrored about the head's centre (x 270): knocked-out X on the
+         left (x 210), and on the right (x 330) an empty socket the pencil is stabbed into -->
     <line x1="190" y1="262" x2="230" y2="302"/>
     <line x1="230" y1="262" x2="190" y2="302"/>
-    <circle cx="300" cy="282" r="24" fill="#FFFFFF"/>
-    <circle cx="300" cy="282" r="8" fill="#2A1A12" stroke="none"/>
+    <circle cx="330" cy="282" r="24" fill="#2A1A12"/>
 
     <!-- Mouth grille -->
     <rect x="190" y="340" width="160" height="44" rx="10" fill="#2A1A12"/>
@@ -32,18 +32,17 @@
     <line x1="318" y1="346" x2="318" y2="378"/>
   </g>
 
-  <!-- Impact: puncture hole and cracks where the pencil enters -->
-  <ellipse cx="330" cy="236" rx="20" ry="14" fill="#2A1A12" transform="rotate(-55 330 236)"/>
+  <!-- Impact: cracks radiating from the eye socket -->
   <g stroke="#2A1A12" stroke-width="5" stroke-linecap="round" fill="none">
-    <polyline points="312,250 292,262 284,282"/>
-    <polyline points="318,222 300,212"/>
-    <polyline points="344,252 352,272 368,278"/>
+    <polyline points="306,296 288,308 282,326"/>
+    <polyline points="306,268 290,256"/>
+    <polyline points="352,296 360,314 374,320"/>
   </g>
 
   <!-- Pencil: drawn pointing left from its tip, then rotated so it plunges
-       down-left into the robot. The graphite tip is omitted so the pencil
-       reads as buried in the head. -->
-  <g transform="translate(330 236) rotate(-55)" stroke="#2A1A12" stroke-width="8" stroke-linejoin="round">
+       down-left into the right eye socket. The graphite tip is omitted so the
+       pencil reads as buried in the eye. -->
+  <g transform="translate(330 282) rotate(-55)" stroke="#2A1A12" stroke-width="8" stroke-linejoin="round">
     <polygon points="12,-10 60,-26 60,26 12,10" fill="#F5D7A1"/>
     <rect x="60" y="-26" width="160" height="52" fill="#C9A045"/>
     <line x1="60" y1="-9" x2="220" y2="-9" stroke="#9C7A2E" stroke-width="5"/>
@@ -54,9 +53,9 @@
 
   <!-- Impact sparks -->
   <g stroke="#E8CF8A" stroke-width="7" stroke-linecap="round">
-    <line x1="376" y1="196" x2="404" y2="176"/>
-    <line x1="384" y1="230" x2="416" y2="232"/>
-    <line x1="286" y1="194" x2="268" y2="170"/>
+    <line x1="372" y1="246" x2="400" y2="228"/>
+    <line x1="368" y1="282" x2="380" y2="286"/>
+    <line x1="290" y1="244" x2="272" y2="222"/>
   </g>
 
   </g>

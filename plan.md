@@ -50,6 +50,8 @@ Phase 3, museum redesign (approved 2026-11-16), with repeat avoidance and an acc
 17. [x] Gallery page: frames, curtains, clock post, wall labels, metal plaques, recolored logo. Worker skips images already seen in the run. Tested locally in headless Edge.
 18. [ ] Deploy and check the live page.
 19. [ ] Developer: play on desktop and phone and judge the look and the curtain timing.
+20. [x] Speed bonus (+2 within 0.5 s, +1 within 1 s), points total, best = best points. Tested locally.
+21. [x] Deploy the speed bonus and the logo changes.
 
 ## Testing and evidence
 
@@ -99,6 +101,9 @@ Phase 3, museum redesign (approved 2026-11-16), with repeat avoidance and an acc
 - Contrast: the bronze and copper plaques first measured 3.4–3.5:1 at their darkest corner. After darker text and lighter corner colors, every text pair measures 4.7:1 or more.
 - Developer feedback: "New best!" now shows only on the round that first passes the record held at the start of the run, and only when there was a record. Artwork bigger and clock smaller. Desktop: art 448 → 460 px, clock 136 → 96 px. Phone: art 250 → 272 px, clock 80 → 60 px. The wall labels were clipping their last line; their box is now sized to the content (118 of 118 px, no line clipped).
 - Local-only: 9 local D1 rows from old ingest tests have no image file, which shows a broken image locally. All 288 live active images have their files.
+- Speed bonus (headless Edge, answers forced correct by wrapping the page's fetch; stored best 3): the badge was hidden at the start. Answers at about 150 ms, 700 ms and 2 s gave the badge +2, then +3, then +3, and Best 3 → 5 → 6. "New best!" appeared only on the second answer (points 3 → 5, first past 3). The losing round said "Streak 3 + speed bonus 3 = 6 points" and stored 6. A new run hid the badge again. Same results on desktop and phone.
+- Logo (Developer request): the eyes now mirror each other about the head's centre (x 210 and 330; the open eye was at 300). The open eye is now an empty socket with the pencil tip stabbed into it, and the cracks and sparks moved with it. Masters and served copies were updated together. The start-screen logo grew from 150 to 230 px (phone about 195 px), and the header mark from 36 to 42 px (phone 30 to 38) within the same header height, so artwork size is unchanged (460 / 272 px).
+- Hid 2 seed AI images titled "logo" (`882b21b99e8733a5`, `295ba86aafa0d13d`, a round badge on white) with `--reject`. They predate the title rules. Live AI count: 61.
 - Repeats: one simulated 40-round run with `seen` served 80 of 80 unique images; without `seen`, 65 of 80. A junk `seen` list is ignored (200).
 
 ## Simplification reviews

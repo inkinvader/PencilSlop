@@ -81,8 +81,8 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 0 var(--pad);
 }
-.brand-logo { height: 36px; width: auto; display: block; }
-.wordmark { font-family: var(--serif); font-weight: 700; font-size: 1.15rem; letter-spacing: 0.22em; }
+.brand-logo { height: 42px; width: auto; display: block; }   /* fills the top line */
+.wordmark { font-family: var(--serif); font-weight: 700; font-size: 1.3rem; letter-spacing: 0.22em; }
 .pencil { color: var(--gold-dark); }
 .slop { color: var(--velvet); }
 
@@ -211,6 +211,23 @@ body {
 .stat { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
 .stat-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
 .stat strong { font-family: var(--serif); font-size: 1.7rem; }
+/* Speed bonus badge: sits to the right of the streak number without moving it off-centre. */
+.stat-value { position: relative; }
+.bonus {
+  position: absolute; left: 100%; top: 50%;
+  margin-left: 6px; padding: 1px 6px;
+  transform: translateY(-50%);
+  border-radius: 10px;
+  background: var(--gold); color: #2a1c05;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(60, 40, 20, 0.3);
+  font: 800 0.8rem var(--sans);
+  white-space: nowrap;
+}
+.bonus.pop { animation: bonus-pop 450ms ease-out; }
+@keyframes bonus-pop {
+  0% { transform: translateY(-50%) scale(1.6); }
+  100% { transform: translateY(-50%) scale(1); }
+}
 
 .clock { position: relative; width: var(--clock); height: var(--clock); filter: drop-shadow(0 6px 8px rgba(60, 40, 20, 0.3)); }
 .clock svg { display: block; width: 100%; height: 100%; }
@@ -241,13 +258,15 @@ body {
   border-radius: 3px;
   box-shadow: 0 0 0 4px var(--gold), 0 0 0 6px var(--gold-dark), 0 20px 44px rgba(40, 25, 10, 0.4);
 }
-.hero-logo { width: min(150px, 36vw); height: auto; display: block; margin: 0 auto; }
+.hero-logo { width: min(230px, 50vw); height: auto; display: block; margin: 0 auto; }
 .intro h1 { font-family: var(--serif); font-size: 2rem; margin: 12px 0 6px; }
 .intro p { margin: 0 0 18px; line-height: 1.45; }
 
 /* ---------- Console: answer plaques, result ---------- */
 
 .console { width: min(980px, 100%); }
+/* On the start screen neither answers nor result is shown: hide the empty bar. */
+.console:not(:has(> :not([hidden]))) { visibility: hidden; }
 .answers, .result { min-height: var(--console-h); }
 
 .answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); }
@@ -329,8 +348,8 @@ body {
     :root { --art-h: calc((100dvh - var(--top-h) - var(--strip-h) - var(--console-h) - 4 * var(--gap) - 2 * var(--pad) - 4 * var(--frame) - 8px) / 2); }
   }
 
-  .brand-logo { height: 30px; }
-  .wordmark { font-size: 1rem; }
+  .brand-logo { height: 38px; }
+  .wordmark { font-size: 1.1rem; }
 
   .exhibit { grid-template-columns: auto; justify-items: center; }
   .piece { gap: 6px; }

@@ -8,12 +8,16 @@ const MIN_VOTES_TO_SHOW = 3;   // hide crowd percentages until an image has this
 const BEST_KEY = "pencilslop-best";
 const CURTAIN_MS = 900;        // must match --curtain-ms in style.css
 const LOW_TIME_S = 3;          // the clock number turns red at this many seconds left
+// Speed bonus for a correct answer, by time since the clock started (first match wins).
+// Points total = streak + bonus. Best is the best points total.
+const SPEED_BONUS = [{ withinMs: 500, points: 2 }, { withinMs: 1000, points: 1 }];
 const KEYS = { l: "left", arrowleft: "left", r: "right", arrowright: "right", b: "both", n: "neither" };
 
 const $ = (id) => document.getElementById(id);
 const state = {
   streak: 0, best: readBest(), roundId: null, deadline: 0, seconds: 10, frameId: 0,
   runOver: false, busy: false, curtainsOpen: false, seen: [],
+  bonus: 0,                   // speed bonus points this run
   bestAtStart: 0,             // best when this run began; "New best!" shows once, on passing it
 };
 
@@ -37,10 +41,12 @@ document.addEventListener("keydown", (e) => {
 
 function startRun() {
   state.streak = 0;
+  state.bonus = 0;
   state.runOver = false;
   state.seen = [];
   state.bestAtStart = state.best;
   $("streak").textContent = 0;
+  $("bonus").hidden = true;          // appears only once a bonus is earned
   $("start").hidden = true;
   nextRound();
 }
@@ -131,6 +137,7 @@ function startClock(seconds) {
 async function submit(choice) {
   if (!state.roundId) return;
   const roundId = state.roundId;
+  const answeredMs = performance.now() - (state.deadline - state.seconds * 1000);
   state.roundId = null;               // one submission per round
   cancelAnimationFrame(state.frameId);
   setAnswersEnabled(false);
@@ -143,18 +150,24 @@ async function submit(choice) {
 
   let verdict;
   if (res.correct) {
+    const before = points();
+    const earned = SPEED_BONUS.find((b) => answeredMs <= b.withinMs)?.points ?? 0;
     state.streak += 1;
-    if (state.streak > state.best) {
-      state.best = state.streak;
+    if (earned) showBonus(earned);
+    if (points() > state.best) {
+      state.best = points();
       writeBest(state.best);
     }
     // Only the round that first passes the old record (and only if there was one).
-    const passedRecord = state.bestAtStart > 0 && state.streak === state.bestAtStart + 1;
-    verdict = passedRecord ? "Correct! New best!" : "Correct!";
+    const passedRecord = state.bestAtStart > 0 && before <= state.bestAtStart && points() > state.bestAtStart;
+    verdict = (earned ? `Correct! Speed bonus +${earned}.` : "Correct!") + (passedRecord ? " New best!" : "");
   } else {
     state.runOver = true;
     const why = res.choice === "timeout" ? "Time's up." : "Wrong.";
-    verdict = `${why} The answer was "${label(res.correctChoice)}". Final streak: ${state.streak}.`;
+    const total = state.bonus
+      ? `Streak ${state.streak} + speed bonus ${state.bonus} = ${points()} points.`
+      : `${points()} points.`;
+    verdict = `${why} The answer was "${label(res.correctChoice)}". ${total}`;
   }
   $("verdict").textContent = verdict;
   $("streak").textContent = state.streak;
@@ -164,6 +177,21 @@ async function submit(choice) {
   $("result").hidden = false;
   $("next-btn").focus({ preventScroll: true });
   announce(verdict);
+}
+
+function points() {
+  return state.streak + state.bonus;
+}
+
+// The +N badge next to the streak; replays its pop each time it grows.
+function showBonus(earned) {
+  state.bonus += earned;
+  const badge = $("bonus");
+  badge.textContent = `+${state.bonus}`;
+  badge.hidden = false;
+  badge.classList.remove("pop");
+  void badge.offsetWidth;            // restart the animation
+  badge.classList.add("pop");
 }
 
 // Museum wall label under each frame: verdict, title, artist, crowd votes, credit, report.

@@ -31,7 +31,10 @@
 
       <!-- Clock post: current streak above, the round clock, best streak below -->
       <div class="clockpost">
-        <div class="stat stat-streak"><span class="stat-label">Streak</span><strong id="streak">0</strong></div>
+        <div class="stat stat-streak">
+          <span class="stat-label">Streak</span>
+          <span class="stat-value"><strong id="streak">0</strong><span class="bonus" id="bonus" title="Speed bonus" hidden>+0</span></span>
+        </div>
         <div class="clock" role="timer" aria-label="Time left">
           <svg viewBox="0 0 120 120" aria-hidden="true">
             <circle class="clock-bezel" cx="60" cy="60" r="57"/>
@@ -42,7 +45,7 @@
           </svg>
           <span class="clock-num" id="timer">10</span>
         </div>
-        <div class="stat stat-best"><span class="stat-label">Best</span><strong id="best">0</strong></div>
+        <div class="stat stat-best"><span class="stat-label">Best</span><strong id="best" title="Best points total (streak + speed bonus)">0</strong></div>
       </div>
 
       <figure class="piece" id="right-piece">
@@ -59,7 +62,7 @@
       <section class="intro" id="start">
         <img class="hero-logo" src="logo.svg" alt="PENCILSLOP logo: a giant pencil stabbed into a robot head">
         <h1>Which one is AI?</h1>
-        <p>Two artworks. Ten seconds. Left, right, both, or neither could be AI-generated. One wrong answer ends your run.</p>
+        <p>Two artworks. Ten seconds. Left, right, both, or neither could be AI-generated. One wrong answer ends your run. Answer right within a second for a speed bonus.</p>
         <button class="brass-btn" id="start-btn">Play</button>
       </section>
     </div>
