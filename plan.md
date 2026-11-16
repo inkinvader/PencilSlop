@@ -52,6 +52,7 @@ Phase 3, museum redesign (approved 2026-11-16), with repeat avoidance and an acc
 19. [ ] Developer: play on desktop and phone and judge the look and the curtain timing.
 20. [x] Speed bonus (+2 within 0.5 s, +1 within 1 s), points total, best = best points. Tested locally.
 21. [x] Deploy the speed bonus and the logo changes.
+22. [x] Hide images that can't be shown: `/api/missing` in play, plus a served-file check before every ingest (`--check-files`). Tested locally, then deployed.
 
 ## Testing and evidence
 
@@ -104,6 +105,7 @@ Phase 3, museum redesign (approved 2026-11-16), with repeat avoidance and an acc
 - Speed bonus (headless Edge, answers forced correct by wrapping the page's fetch; stored best 3): the badge was hidden at the start. Answers at about 150 ms, 700 ms and 2 s gave the badge +2, then +3, then +3, and Best 3 → 5 → 6. "New best!" appeared only on the second answer (points 3 → 5, first past 3). The losing round said "Streak 3 + speed bonus 3 = 6 points" and stored 6. A new run hid the badge again. Same results on desktop and phone.
 - Logo (Developer request): the eyes now mirror each other about the head's centre (x 210 and 330; the open eye was at 300). The open eye is now an empty socket with the pencil tip stabbed into it, and the cracks and sparks moved with it. Masters and served copies were updated together. The start-screen logo grew from 150 to 230 px (phone about 195 px), and the header mark from 36 to 42 px (phone 30 to 38) within the same header height, so artwork size is unchanged (460 / 272 px).
 - Logo, second pass (Developer request): cracks and sparks removed; teeth are now five separate white teeth (colors reversed from the dark bar); the pencil has no tip and comes out of the eye socket, with the socket widened to r 30 to fit the 52 px pencil and shaded fully dark inside so the buried end reads as deep. Checked in headless Edge at 300 px, 200 px and 44 px.
+- Unservable images (Developer: "if an image can't be used or doesn't appear, remove it"): all 286 live active images were fetched and decoded as 640×640 JPEGs, with no blank ones, so the missing images were the 9 local test rows with no file. `/api/missing`: a working image was kept, a missing one hidden and never served in the next 300 rounds, a bad side gave 400 and an unknown round 404. 40 local rounds in headless Edge: the page hit 1 broken image, reported it and swapped in another pair, and no round opened with a broken image. `--check-files --local` hid the other 7 local rows; `--check-files --remote` checked 286 and hid 0.
 - Hid 2 seed AI images titled "logo" (`882b21b99e8733a5`, `295ba86aafa0d13d`, a round badge on white) with `--reject`. They predate the title rules. Live AI count: 61.
 - Repeats: one simulated 40-round run with `seen` served 80 of 80 unique images; without `seen`, 65 of 80. A junk `seen` list is ignored (200).
 

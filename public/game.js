@@ -7,6 +7,7 @@
 const MIN_VOTES_TO_SHOW = 3;   // hide crowd percentages until an image has this many votes
 const BEST_KEY = "pencilslop-best";
 const CURTAIN_MS = 900;        // must match --curtain-ms in style.css
+const LOAD_ATTEMPTS = 3;       // pairs to try when an image fails to load
 const LOW_TIME_S = 3;          // the clock number turns red at this many seconds left
 // Speed bonus for a correct answer, by time since the clock started (first match wins).
 // Points total = streak + bonus. Best is the best points total.
@@ -68,14 +69,32 @@ async function nextRound() {
     $(`${side}-img`).alt = `${side === "left" ? "Left" : "Right"} artwork`;
   }
 
-  const round = await api("/api/round", { streak: state.streak, seen: state.seen });
-  if (!round) { state.busy = false; return; }
+  // Load the pair behind the curtains. If an image fails to load, tell the server
+  // (it hides the image if the file is really gone) and try a different pair.
+  let round = null;
+  for (let attempt = 0; attempt < LOAD_ATTEMPTS && !round; attempt++) {
+    const next = await api("/api/round", { streak: state.streak, seen: state.seen });
+    if (!next) { state.busy = false; return; }
+    state.seen.push(imageId(next.left), imageId(next.right));
+    const loaded = await Promise.all([loadImage($("left-img"), next.left), loadImage($("right-img"), next.right)]);
+    if (loaded[0] && loaded[1]) round = next;
+    ["left", "right"].forEach((side, i) => {
+      if (!loaded[i]) api("/api/missing", { roundId: next.roundId, side }, { quiet: true });
+    });
+  }
+  if (!round) {
+    state.busy = false;
+    showError("The artwork couldn't be loaded. Check your connection and try again.");
+    $("answers").hidden = true;
+    $("result").hidden = false;
+    $("verdict").textContent = "";
+    $("next-btn").textContent = "Try again";
+    return;
+  }
   state.roundId = round.roundId;
   state.seconds = round.seconds;
-  state.seen.push(imageId(round.left), imageId(round.right));
 
-  // Wait for both images, then the curtains, before starting the clock.
-  await Promise.all([loadImage($("left-img"), round.left), loadImage($("right-img"), round.right)]);
+  // Both images are in; open the curtains, then start the clock.
   await setCurtains(true);
   state.busy = false;
   setAnswersEnabled(true);
@@ -265,9 +284,11 @@ async function api(path, body = {}, { quiet = false } = {}) {
   }
 }
 
+// Resolves true when the image loaded, false when it failed.
 function loadImage(img, src) {
   return new Promise((resolve) => {
-    img.onload = img.onerror = resolve;
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
     img.src = src;
   });
 }

@@ -4,7 +4,9 @@
   "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    // Lets the Worker check that an image file really exists (see /api/missing).
+    "binding": "ASSETS"
   },
   "d1_databases": [
     {

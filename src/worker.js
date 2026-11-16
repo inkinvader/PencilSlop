@@ -5,6 +5,7 @@
 //   POST /api/round   { streak, seen } -> { roundId, left, right, seconds }   (no answer included)
 //   POST /api/answer  { roundId, choice } -> truth, credits, and prior crowd votes
 //   POST /api/report  { roundId, side }   -> flag an image from an answered round
+//   POST /api/missing { roundId, side }   -> an image failed to load; hidden if its file is gone
 
 const ROUND_SECONDS = 10;
 const GRACE_MS = 3000;                 // allowance for network latency on the timer
@@ -32,6 +33,7 @@ export default {
       if (request.method === "POST" && pathname === "/api/round") return await newRound(request, env);
       if (request.method === "POST" && pathname === "/api/answer") return await answer(request, env);
       if (request.method === "POST" && pathname === "/api/report") return await report(request, env);
+      if (request.method === "POST" && pathname === "/api/missing") return await missing(request, env);
       return json({ error: "Not found" }, 404);
     } catch (err) {
       console.error(err);
@@ -175,6 +177,23 @@ async function report(request, env) {
      WHERE id = ?`
   ).bind(REPORTS_TO_HIDE, imageId).run();
   return json({ ok: true });
+}
+
+// The page couldn't load an image. The Worker checks the deployed file itself, so
+// a player can't hide a working image this way; only a missing file is hidden.
+async function missing(request, env) {
+  const { roundId, side } = await request.json().catch(() => ({}));
+  if (typeof roundId !== "string" || (side !== "left" && side !== "right")) {
+    return json({ error: "Bad request" }, 400);
+  }
+  const round = await env.DB.prepare("SELECT left_id, right_id FROM rounds WHERE id = ?").bind(roundId).first();
+  if (!round) return json({ error: "Unknown round" }, 404);
+
+  const imageId = side === "left" ? round.left_id : round.right_id;
+  const file = await env.ASSETS.fetch(new URL(`/img/${imageId}.jpg`, request.url));
+  if (file.ok) return json({ hidden: false });
+  await env.DB.prepare("UPDATE images SET active = 0 WHERE id = ?").bind(imageId).run();
+  return json({ hidden: true });
 }
 
 function voteStatement(env, id, judgedAI) {

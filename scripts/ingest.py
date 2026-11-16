@@ -34,6 +34,8 @@ Usage:
   python scripts/ingest.py --remote --recheck-images      apply the image checks to the active
                                                           catalog (also fills missing hashes)
   python scripts/ingest.py --remote --retier              set tiers on existing images by the rules
+  python scripts/ingest.py --remote --check-files         hide active images the site can't serve
+                                                          (also runs before every ingest)
 """
 
 import argparse
@@ -50,6 +52,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytesseract
@@ -61,6 +64,7 @@ DB_NAME = "pencilslop"
 
 # Identifies the client to the museum and Commons APIs; the repo URL is the contact point.
 USER_AGENT = "PENCILSLOP-class-project/0.2 (+https://github.com/inkinvader/PencilSlop)"
+SITE_URL = "https://pencilslop.pencilslop.workers.dev"   # where --remote checks that images are served
 SQUARE_SIDE = 640          # every image is stored at exactly this size
 MAX_ASPECT = 1.6           # skip images wider or taller than this before cropping
 JPEG_QUALITY = 82
@@ -524,6 +528,36 @@ def recheck_images(store):
     print(f"  checked {len(rows)} images, hid {len(hidden)}")
 
 
+def hide_unservable(store):
+    """Hide active images that can't be shown. Remote: the live site must serve the
+    file (checked over HTTP, so a local checkout that is missing new images can't
+    hide them by mistake). Local: the file must exist in public/img. An image whose
+    check fails for another reason (network trouble) is kept."""
+    rows = store.query("SELECT id, title FROM images WHERE active = 1")
+
+    def servable(row):                     # True, False (definitely gone), or None (unknown)
+        if store.target == "local":
+            return (IMG_DIR / f"{row['id']}.jpg").exists()
+        req = urllib.request.Request(f"{SITE_URL}/img/{row['id']}.jpg", method="HEAD",
+                                     headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.headers.get("content-type", "").startswith("image/")
+        except urllib.error.HTTPError as err:
+            return False if err.code in (404, 410) else None
+        except Exception:
+            return None
+
+    with ThreadPoolExecutor(8) as ex:
+        results = list(ex.map(servable, rows))
+    gone = [r for r, ok in zip(rows, results) if ok is False]
+    store.execute([f"UPDATE images SET active = 0 WHERE id = {sql(r['id'])};" for r in gone])
+    for r in gone:
+        print(f"  - hid {r['id']}  {r['title'][:50]}  (image not served)")
+    unknown = sum(1 for ok in results if ok is None)
+    print(f"  checked {len(rows)} images: {len(gone)} hidden" + (f", {unknown} unreachable (kept)" if unknown else ""))
+
+
 def retier(store):
     """Set every image's tier by the current rules (human_tier, ai_tier), in
     batches so each source API sees only a few requests."""
@@ -566,6 +600,7 @@ def main():
     ap.add_argument("--recheck-ai", action="store_true")
     ap.add_argument("--recheck-images", action="store_true")
     ap.add_argument("--retier", action="store_true", help="set tiers on existing images by the rules")
+    ap.add_argument("--check-files", action="store_true", help="hide active images the site can't serve")
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # titles include non-Latin text
@@ -580,7 +615,11 @@ def main():
         recheck_images(store)
     elif args.retier:
         retier(store)
+    elif args.check_files:
+        hide_unservable(store)
     else:
+        print("Checking that every active image is served:")
+        hide_unservable(store)
         known, hashes = store.known_sources(), store.stored_hashes()
         print("Human art (Art Institute of Chicago):")
         rows = ingest(store, human_candidates(), args.human, known, hashes)
