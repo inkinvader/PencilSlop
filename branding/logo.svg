@@ -19,43 +19,39 @@
          left (x 210), and on the right (x 330) an empty socket the pencil is stabbed into -->
     <line x1="190" y1="262" x2="230" y2="302"/>
     <line x1="230" y1="262" x2="190" y2="302"/>
-    <circle cx="330" cy="282" r="24" fill="#2A1A12"/>
+    <circle cx="330" cy="282" r="30" fill="#2A1A12"/>
 
-    <!-- Mouth grille -->
-    <rect x="190" y="340" width="160" height="44" rx="10" fill="#2A1A12"/>
-  </g>
-  <g stroke="#C9D3E0" stroke-width="6">
-    <line x1="222" y1="346" x2="222" y2="378"/>
-    <line x1="254" y1="346" x2="254" y2="378"/>
-    <line x1="286" y1="346" x2="286" y2="378"/>
-    <line x1="318" y1="346" x2="318" y2="378"/>
   </g>
 
-  <!-- Impact: cracks radiating from the eye socket -->
-  <g stroke="#2A1A12" stroke-width="5" stroke-linecap="round" fill="none">
-    <polyline points="306,296 288,308 282,326"/>
-    <polyline points="306,268 290,256"/>
-    <polyline points="352,296 360,314 374,320"/>
+  <!-- Teeth: five separate white teeth -->
+  <g fill="#FFFFFF" stroke="#2A1A12" stroke-width="6" stroke-linejoin="round">
+    <rect x="190" y="340" width="28" height="44" rx="7"/>
+    <rect x="223" y="340" width="28" height="44" rx="7"/>
+    <rect x="256" y="340" width="28" height="44" rx="7"/>
+    <rect x="289" y="340" width="28" height="44" rx="7"/>
+    <rect x="322" y="340" width="28" height="44" rx="7"/>
   </g>
 
-  <!-- Pencil: drawn pointing left from its tip, then rotated so it plunges
-       down-left into the right eye socket. The graphite tip is omitted so the
-       pencil reads as buried in the eye. -->
+  <!-- Pencil: drawn along +x from the socket's centre, then rotated so it sticks
+       up-right out of the right eye. Its front half (tip and wood) is buried in
+       the socket, so only the shaft, ferrule and eraser show. -->
+  <defs>
+    <radialGradient id="socket-depth">
+      <stop offset="0" stop-color="#2A1A12" stop-opacity="1"/>
+      <stop offset="0.6" stop-color="#2A1A12" stop-opacity="1"/>
+      <stop offset="1" stop-color="#2A1A12" stop-opacity="0.35"/>
+    </radialGradient>
+  </defs>
   <g transform="translate(330 282) rotate(-55)" stroke="#2A1A12" stroke-width="8" stroke-linejoin="round">
-    <polygon points="12,-10 60,-26 60,26 12,10" fill="#F5D7A1"/>
-    <rect x="60" y="-26" width="160" height="52" fill="#C9A045"/>
-    <line x1="60" y1="-9" x2="220" y2="-9" stroke="#9C7A2E" stroke-width="5"/>
-    <line x1="60" y1="9" x2="220" y2="9" stroke="#9C7A2E" stroke-width="5"/>
-    <rect x="220" y="-26" width="24" height="52" fill="#B8C0CC"/>
-    <rect x="244" y="-26" width="32" height="52" rx="10" fill="#C9505C"/>
+    <rect x="-8" y="-26" width="204" height="52" fill="#C9A045"/>
+    <line x1="-8" y1="-9" x2="196" y2="-9" stroke="#9C7A2E" stroke-width="5"/>
+    <line x1="-8" y1="9" x2="196" y2="9" stroke="#9C7A2E" stroke-width="5"/>
+    <rect x="196" y="-26" width="24" height="52" fill="#B8C0CC"/>
+    <rect x="220" y="-26" width="32" height="52" rx="10" fill="#C9505C"/>
   </g>
-
-  <!-- Impact sparks -->
-  <g stroke="#E8CF8A" stroke-width="7" stroke-linecap="round">
-    <line x1="372" y1="246" x2="400" y2="228"/>
-    <line x1="368" y1="282" x2="380" y2="286"/>
-    <line x1="290" y1="244" x2="272" y2="222"/>
-  </g>
+  <!-- Socket over the pencil: darkening toward the centre, crisp rim -->
+  <circle cx="330" cy="282" r="30" fill="url(#socket-depth)"/>
+  <circle cx="330" cy="282" r="30" fill="none" stroke="#2A1A12" stroke-width="8"/>
 
   </g>
 
