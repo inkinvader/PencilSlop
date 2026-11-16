@@ -35,9 +35,17 @@ Phase 2, automated catalog (approved 2026-11-09):
 8. [x] D1 migrations (`active`, `reports`, `added_at`, `screening`; `rejected` and `reports` tables). Applied live; 254 rows and their votes kept.
 9. [x] Worker: serve active images only; `/api/report` with auto-hide at 3 reports.
 10. [x] `scripts/ingest.py` (fixed rules, publish order) and the nightly workflow.
-11. [ ] Developer: create a Cloudflare API token and add the two GitHub secrets, then trigger one manual workflow run.
+11. [x] Developer: create a Cloudflare API token and add the two GitHub secrets, then trigger one manual workflow run.
 12. [x] Logo on the page: full logo on the start screen, mark-only version in the header and browser tab (checked in headless Edge).
 13. [x] Free image checks: near-duplicate (dHash) and text (Tesseract), calibrated, in ingest and `--recheck-images`; migration 0003 applied live. Obsolete `db/` files removed.
+
+Phase 3, difficulty tiers (approved 2026-11-16):
+
+14. [ ] Tiers by fixed rules in `ingest.py` (new images and `--retier`), streak-based odds in the Worker, streak sent by the page. Tested locally.
+15. [ ] Deploy, `--retier` on the live catalog, and check a live round.
+16. [ ] Developer: play a run and judge whether the early rounds feel easier.
+
+Phase 3, museum redesign: spec to be approved.
 
 ## Testing and evidence
 
@@ -61,6 +69,17 @@ Phase 2, automated catalog (approved 2026-11-09):
 - Local rules-only ingest of 2 + 2: the AI pair included a protest sign with text and a near-duplicate of an existing image. Rules alone let both through.
 - Live: migrations applied with votes kept (116, then 122 with live play). 58 rejections imported. Round, image, and answer worked, and a report before answering was refused.
 - Live end-to-end ingest of 1 + 1: images were committed and pushed (`a00a7f0`), deployed, served (200), and their rows added. The text-sign image was then hidden with `--reject`.
+
+2026-11-16, nightly workflow:
+- The scheduled runs from Nov 12 to 16 all failed because the repository had no secrets (wrangler: "set a CLOUDFLARE_API_TOKEN").
+- The Developer created a custom token (Account: Workers Scripts Edit, D1 Edit) and added `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- Manual run 43967068822 (2 human + 1 AI) passed in 52 s. It committed `4de44f7`, deployed, and added the rows. The active catalog is now 195 human and 63 AI. All 3 new images were served live (200 image/jpeg).
+
+2026-11-16, difficulty tiers (local):
+- `--retier --local` set tiers on 262 of 263 images (one AI file no longer found on Commons; left unchanged). Human: all 195 medium, because the earlier ingest took the museum's top search results, which are all "regular" works. AI: 23 easy, 21 medium, 24 hard.
+- 1,000 rounds per streak, tiers of the AI slots served (target in brackets): streak 0: 49/31/20 (50/30/20); 5: 31/43/26 (30/45/25); 10: 14/39/47 (15/40/45); 15: 11/24/65 (10/25/65).
+- `/api/round` with no body or a non-number streak is served as streak 0.
+- The first 6 human candidates alternate tiers 1, 2, 3, 1, 2, 3.
 
 ## Simplification reviews
 

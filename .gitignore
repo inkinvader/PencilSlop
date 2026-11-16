@@ -3,3 +3,4 @@ node_modules/
 .dev.vars
 # Raw downloads before normalization; only processed images in public/img are committed
 scripts/raw/
+__pycache__/

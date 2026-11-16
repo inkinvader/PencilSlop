@@ -15,6 +15,9 @@ Each run:
      deploy the Worker, and only then add their rows to D1. A round can then
      never point at an image the live site doesn't have.
   6. Records every refused source in D1 `rejected` so it is never fetched again.
+  7. Sets each image's difficulty tier (1 easy, 2 medium, 3 hard) by fixed rules:
+     human by the museum's own popularity flags, AI by Commons upload year
+     (see human_tier and ai_tier). The Worker picks tiers by the player's streak.
 
 D1 is the source of truth for the catalog. Rules can't catch everything (e.g.
 photorealism or a textless watermark), so players' reports hide images that
@@ -30,6 +33,7 @@ Usage:
   python scripts/ingest.py --remote --recheck-ai          re-verify AI evidence of active AI images
   python scripts/ingest.py --remote --recheck-images      apply the image checks to the active
                                                           catalog (also fills missing hashes)
+  python scripts/ingest.py --remote --retier              set tiers on existing images by the rules
 """
 
 import argparse
@@ -66,6 +70,11 @@ DOWNLOAD_PAUSE_S = 1.0     # be polite to the museum and Commons servers
 # 2026-11-09: a known near-duplicate scored 1; the closest genuinely different
 # catalog pair scored 10.
 DUPLICATE_DISTANCE = 6
+# Difficulty tiers for AI images: upload year stands in for generator quality
+# (older generators look more obviously AI). Through this year = easy, the next = medium,
+# later = hard. Approved 2026-11-16; vote data is meant to replace this in Phase 4.
+AI_EASY_THROUGH_YEAR = 2022
+AI_MEDIUM_YEAR = 2023
 # Text check (Tesseract): see image_text_words. Set by calibration on known text
 # images vs the catalog (plan.md, testing and evidence).
 OCR_PSM = 11               # "sparse text": find words anywhere in a picture
@@ -177,7 +186,7 @@ def sql(v):
 
 
 def insert_image(entry):
-    cols = ["id", "is_ai", "title", "artist", "source_url", "license", "ai_evidence", "added_at", "screening", "phash"]
+    cols = ["id", "is_ai", "title", "artist", "source_url", "license", "ai_evidence", "added_at", "screening", "phash", "tier"]
     return f"INSERT OR IGNORE INTO images ({', '.join(cols)}) VALUES ({', '.join(sql(entry.get(c)) for c in cols)});"
 
 
@@ -189,16 +198,45 @@ def insert_rejected(source_url, title, reason):
 # --------------------------------------------------------------------------
 # Candidate sources
 
+# Human tiers come from the museum's own flags: "boosted" highlights are its famous
+# works (easy); "not viewed much" works are obscure (hard); everything else is medium.
+AIC_FIELDS = ["id", "title", "artist_title", "image_id", "is_boosted", "has_not_been_viewed_much"]
+BOOSTED = {"term": {"is_boosted": True}}
+RARELY_VIEWED = {"term": {"has_not_been_viewed_much": True}}
+HUMAN_TIER_FILTERS = {           # tier: (must, must_not) added to the base query
+    1: ([BOOSTED], []),
+    2: ([], [BOOSTED, RARELY_VIEWED]),
+    3: ([RARELY_VIEWED], [BOOSTED]),
+}
+
+
+def human_tier(artwork):
+    if artwork.get("is_boosted"):
+        return 1
+    return 3 if artwork.get("has_not_been_viewed_much") else 2
+
+
 def human_candidates():
-    """Public-domain paintings from the Art Institute of Chicago, skipping its
-    'boosted' highlights so the works are less famous. Pages until exhausted."""
+    """Public-domain paintings from the Art Institute of Chicago, alternating
+    between the three tiers so each tier grows at a similar rate."""
+    sources = [human_candidates_in_tier(t) for t in HUMAN_TIER_FILTERS]
+    while sources:
+        for src in list(sources):
+            try:
+                yield next(src)
+            except StopIteration:
+                sources.remove(src)
+
+
+def human_candidates_in_tier(tier):
+    must, must_not = HUMAN_TIER_FILTERS[tier]
     for page in range(1, 100):
         query = {
             "query": {"bool": {
-                "must": [{"term": {"is_public_domain": True}}, {"term": {"artwork_type_id": 1}}],
-                "must_not": [{"term": {"is_boosted": True}}],
+                "must": [{"term": {"is_public_domain": True}}, {"term": {"artwork_type_id": 1}}, *must],
+                "must_not": must_not,
             }},
-            "fields": ["id", "title", "artist_title", "image_id"],
+            "fields": AIC_FIELDS,
             "limit": 100,
             "page": page,
         }
@@ -214,6 +252,7 @@ def human_candidates():
                     "source_url": f"https://www.artic.edu/artworks/{a['id']}",
                     "license": "CC0 (public domain), Art Institute of Chicago",
                     "ai_evidence": None,
+                    "tier": human_tier(a),
                     "download_url": f"https://www.artic.edu/iiif/2/{a['image_id']}/full/843,/0/default.jpg",
                 }
 
@@ -268,6 +307,14 @@ def wikitext_of(page):
     return page.get("revisions", [{}])[0].get("slots", {}).get("main", {}).get("*", "")
 
 
+def ai_tier(timestamp):
+    """Tier from a Commons upload timestamp such as '2023-04-01T12:00:00Z'."""
+    year = int(timestamp[:4])
+    if year <= AI_EASY_THROUGH_YEAR:
+        return 1
+    return 2 if year == AI_MEDIUM_YEAR else 3
+
+
 def ai_candidates():
     for category in AI_CATEGORIES:
         yield from ai_candidates_in(category)
@@ -280,7 +327,7 @@ def ai_candidates_in(category):
     while True:
         data = commons_query(
             generator="categorymembers", gcmtitle=category, gcmtype="file", gcmlimit="20",
-            prop="imageinfo|revisions", iiprop="url|mime|extmetadata", iiurlwidth="1000",
+            prop="imageinfo|revisions", iiprop="url|mime|extmetadata|timestamp", iiurlwidth="1000",
             rvprop="content", rvslots="main", **cont,
         )
         for page in data.get("query", {}).get("pages", {}).values():
@@ -305,6 +352,7 @@ def ai_entry(page):
         "source_url": info["descriptionurl"],
         "license": f"{license_name}, via Wikimedia Commons",
         "ai_evidence": ai_evidence(wikitext_of(page)),
+        "tier": ai_tier(info["timestamp"]),
         "download_url": info.get("thumburl") or info["url"],
     }
     if entry["ai_evidence"] is None:
@@ -476,6 +524,37 @@ def recheck_images(store):
     print(f"  checked {len(rows)} images, hid {len(hidden)}")
 
 
+def retier(store):
+    """Set every image's tier by the current rules (human_tier, ai_tier), in
+    batches so each source API sees only a few requests."""
+    rows = store.query("SELECT id, is_ai, source_url FROM images")
+    tiers = {}                                   # image id -> tier
+    human = [r for r in rows if not r["is_ai"]]
+    ai = [r for r in rows if r["is_ai"]]
+
+    for i in range(0, len(human), 100):
+        batch = {r["source_url"].rsplit("/", 1)[1]: r["id"] for r in human[i:i + 100]}
+        url = ("https://api.artic.edu/api/v1/artworks?fields=id,is_boosted,has_not_been_viewed_much"
+               "&limit=100&ids=" + ",".join(batch))
+        for a in json.loads(http_get(url))["data"]:
+            if str(a["id"]) in batch:
+                tiers[batch[str(a["id"])]] = human_tier(a)
+
+    for i in range(0, len(ai), 50):
+        batch = {"File:" + urllib.parse.unquote(r["source_url"].split("/File:")[1]).replace("_", " "): r["id"]
+                 for r in ai[i:i + 50]}
+        data = commons_query(titles="|".join(batch), prop="imageinfo", iiprop="timestamp")
+        # The API normalizes some titles; map them back before matching.
+        renamed = {n["to"]: n["from"] for n in data["query"].get("normalized", [])}
+        for page in data["query"]["pages"].values():
+            image_id = batch.get(renamed.get(page["title"], page["title"]))
+            if image_id and "imageinfo" in page:
+                tiers[image_id] = ai_tier(page["imageinfo"][0]["timestamp"])
+
+    store.execute([f"UPDATE images SET tier = {t} WHERE id = {sql(i)};" for i, t in tiers.items()])
+    print(f"  set tiers on {len(tiers)} images; {len(rows) - len(tiers)} not found at their source (unchanged)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     where = ap.add_mutually_exclusive_group(required=True)
@@ -486,6 +565,7 @@ def main():
     ap.add_argument("--reject", nargs=2, metavar=("ID", "REASON"))
     ap.add_argument("--recheck-ai", action="store_true")
     ap.add_argument("--recheck-images", action="store_true")
+    ap.add_argument("--retier", action="store_true", help="set tiers on existing images by the rules")
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # titles include non-Latin text
@@ -498,6 +578,8 @@ def main():
         recheck_ai(store)
     elif args.recheck_images:
         recheck_images(store)
+    elif args.retier:
+        retier(store)
     else:
         known, hashes = store.known_sources(), store.stored_hashes()
         print("Human art (Art Institute of Chicago):")

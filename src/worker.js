@@ -2,7 +2,7 @@
 // artwork images in public/img/) are served by Cloudflare's asset handler; only
 // /api/* requests reach this code.
 //
-//   POST /api/round   -> { roundId, left, right, seconds }   (no answer included)
+//   POST /api/round   { streak } -> { roundId, left, right, seconds }   (no answer included)
 //   POST /api/answer  { roundId, choice } -> truth, credits, and prior crowd votes
 //   POST /api/report  { roundId, side }   -> flag an image from an answered round
 
@@ -13,11 +13,22 @@ const AI_CHANCE_MAX = 0.6;
 const REPORTS_TO_HIDE = 3;             // an image with this many reports stops being served
 const CHOICES = ["left", "right", "both", "neither", "timeout"];
 
+// Difficulty: each slot picks a tier (1 easy, 2 medium, 3 hard; set by ingest.py)
+// with odds that depend on the player's streak. Between these rows the odds are
+// interpolated linearly; past the last row they stay fixed. Approved 2026-11-16.
+const TIER_ODDS = [
+  // streak  [easy, medium, hard]
+  { streak: 0,  odds: [0.50, 0.30, 0.20] },
+  { streak: 5,  odds: [0.30, 0.45, 0.25] },
+  { streak: 10, odds: [0.15, 0.40, 0.45] },
+  { streak: 15, odds: [0.10, 0.25, 0.65] },
+];
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     try {
-      if (request.method === "POST" && pathname === "/api/round") return await newRound(env);
+      if (request.method === "POST" && pathname === "/api/round") return await newRound(request, env);
       if (request.method === "POST" && pathname === "/api/answer") return await answer(request, env);
       if (request.method === "POST" && pathname === "/api/report") return await report(request, env);
       return json({ error: "Not found" }, 404);
@@ -28,14 +39,20 @@ export default {
   },
 };
 
-// Serve a new pair. Each slot is independently AI with this round's chance.
-async function newRound(env) {
+// Serve a new pair. Each slot is independently AI with this round's chance, and
+// independently picks a tier by the streak. The streak comes from the browser; a
+// faked streak only changes which images are shown, never the answer.
+async function newRound(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const streak = Number.isInteger(body.streak) && body.streak > 0 ? body.streak : 0;
+  const odds = tierOdds(streak);
+
   const chance = AI_CHANCE_MIN + Math.random() * (AI_CHANCE_MAX - AI_CHANCE_MIN);
   const leftAI = Math.random() < chance;
   const rightAI = Math.random() < chance;
 
-  const left = await randomImage(env, leftAI, null);
-  const right = await randomImage(env, rightAI, left);
+  const left = await randomImage(env, leftAI, pickTier(odds), null);
+  const right = await randomImage(env, rightAI, pickTier(odds), left);
   if (!left || !right) return json({ error: "Catalog too small" }, 500);
 
   const roundId = crypto.randomUUID();
@@ -46,10 +63,32 @@ async function newRound(env) {
   return json({ roundId, left: `/img/${left}.jpg`, right: `/img/${right}.jpg`, seconds: ROUND_SECONDS });
 }
 
-async function randomImage(env, isAI, excludeId) {
+// Odds for a streak, interpolated between the TIER_ODDS rows.
+function tierOdds(streak) {
+  const last = TIER_ODDS[TIER_ODDS.length - 1];
+  if (streak >= last.streak) return last.odds;
+  const i = TIER_ODDS.findIndex((row) => row.streak > streak);
+  const lo = TIER_ODDS[i - 1], hi = TIER_ODDS[i];
+  const t = (streak - lo.streak) / (hi.streak - lo.streak);
+  return lo.odds.map((p, k) => p + t * (hi.odds[k] - p));
+}
+
+function pickTier(odds) {
+  let r = Math.random();
+  for (let k = 0; k < odds.length; k++) {
+    r -= odds[k];
+    if (r < 0) return k + 1;
+  }
+  return odds.length;
+}
+
+// A random active image of the given kind and tier. If that tier has none of
+// this kind yet, any tier is used, so a thin tier never breaks a round.
+async function randomImage(env, isAI, tier, excludeId) {
   const row = await env.DB.prepare(
-    "SELECT id FROM images WHERE active = 1 AND is_ai = ? AND id != ? ORDER BY RANDOM() LIMIT 1"
-  ).bind(isAI ? 1 : 0, excludeId ?? "").first();
+    `SELECT id FROM images WHERE active = 1 AND is_ai = ? AND id != ?
+     ORDER BY (tier = ?) DESC, RANDOM() LIMIT 1`
+  ).bind(isAI ? 1 : 0, excludeId ?? "", tier).first();
   return row?.id ?? null;
 }
 

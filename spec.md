@@ -38,7 +38,15 @@ Approved for Phase 2:
 | Logo | The full logo is on the start screen; the mark-only version is in the header and the browser tab. |
 | Cost | The whole system runs on free tiers with no payment method: Cloudflare Workers + D1 and GitHub Actions. |
 
-Provisional, not yet specified: difficulty tiers, avoiding repeat images within a run, branding polish, accessibility pass, phone layout refinements.
+Approved for Phase 3 (2026-11-16):
+
+| Behavior | Counts as working |
+|---|---|
+| Difficulty tiers | Every image has tier 1 (easy), 2 (medium) or 3 (hard), set by fixed rules in `ingest.py`. Human: AIC `is_boosted` (famous) = easy, `has_not_been_viewed_much` = hard, other = medium. AI: Commons upload year 2022 or earlier = easy, 2023 = medium, 2024 or later = hard. `--retier` applies the rules to existing images. |
+| Difficulty ramp | The page sends its streak with `/api/round`. Each slot picks a tier with odds by streak (easy/medium/hard): 0 → 50/30/20, 5 → 30/45/25, 10 → 15/40/45, 15+ → 10/25/65, linear in between. If the tier has no image of the needed kind, any tier is used. A local run of 1,000 rounds per streak matches the odds within a few percent. |
+| Tier growth | The nightly human picks rotate through the three AIC groups, so each tier grows. |
+
+Provisional, not yet specified: museum redesign (next), avoiding repeat images within a run, accessibility pass.
 
 ## Architecture
 
@@ -87,10 +95,11 @@ Play → `POST /api/round` (active images only) → load both images → timer s
 - Schema changes are new files in `migrations/`, applied with `wrangler d1 migrations apply`.
 - Publish order is images live first, then rows. Always `git pull` before deploying by hand, because the nightly job commits images.
 - Images are hidden (`active = 0`), never deleted, so past rounds stay valid.
-- Tunable constants (timer, grace period, AI chance range, minimum votes, reports to hide, crop size) are named at the top of the file that uses them.
+- Tunable constants (timer, grace period, AI chance range, tier odds, AI tier years, minimum votes, reports to hide, crop size) are named at the top of the file that uses them.
 
 ### Decisions and changes
 
+- **Rule-based tiers until votes exist** (2026-11-16, Developer). The pitch planned hand-assigned tiers, but the catalog grows with no manual review, and only 8 images had 3+ votes. Tiers come from source signals instead (museum popularity flags, AI upload year as a proxy for generator quality). Phase 4 is meant to re-rank by how often each image fooled players. Trade-off: upload year is only a rough stand-in for how convincing an AI image is.
 - **Single Worker with static assets** (2026-11-09). One deploy, no separate host.
 - **Square 640 px crop for all images** (2026-11-09). The first catalog showed every AI image was square and no human one was, which gave the answer away. Trade-off: the edges of non-square works are trimmed.
 - **Vote counters on `images`** rather than computing stats from `rounds` each time. Cheap reads; `rounds` still keeps each choice.

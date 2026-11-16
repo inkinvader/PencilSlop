@@ -33,7 +33,7 @@ async function nextRound() {
     $(`${side}-fig`).className = "art";
   }
 
-  const round = await api("/api/round");
+  const round = await api("/api/round", { streak: state.streak });
   if (!round) return;
   state.roundId = round.roundId;
 
