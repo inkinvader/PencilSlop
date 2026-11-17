@@ -32,7 +32,7 @@ Approved for Phase 2:
 | Streak and best | Streak resets on a new run; best is stored in `localStorage` and the game still works if storage is blocked. |
 | One vote per device per image | The browser keeps the IDs of images it has voted on (`localStorage`, up to 5,000) and sends `countLeft` / `countRight: false` for repeats; the Worker then records the answer but adds no vote for that image, and stores `left_counted` / `right_counted` on the round. No device identifier is sent or stored. Missing flags (older pages) count. If storage is blocked (private windows), repeats count. Votes cast before 2026-11-17 can't be de-duplicated. |
 | Shared across devices | Two devices playing the deployed URL see each other's votes in the stats. |
-| Reports | After a round is answered, each image has a Report button. One report counts per image per round; reporting before answering is refused (409). At 3 reports an image stops being served. |
+| Reports | After a round is answered, each image has a Report button. One report counts per image per round; reporting before answering is refused (409). Each device reports an image once: the browser remembers reported image IDs (`localStorage`) and shows "Already reported" when the image comes up again. At 3 reports an image stops being served. |
 | Catalog growth | A nightly job adds new images with no manual review, using only the fixed rules below. There is no set catalog size. |
 | Fixed catalog rules | Human: AIC public-domain painting. AI: the Commons file page names a generator or carries `{{PD-algorithm}}`, and no robot or machine subject (title or page text names a robot, android, cyborg, droid, mecha, mechanical, automaton, humanoid, exoskeleton, steampunk, clockwork, cybernetic or cyberpunk subject, or the title says machine; Developer, 2026-11-17: too easy to spot). Both: free license, JPEG/PNG/WebP, no more than 1.6:1 before the square crop, no "not artwork" title words. Every refused source is recorded and never fetched again. |
 | Image checks | After normalization: refused if its dHash is within 6 bits of any stored image (near-duplicate), or if Tesseract reads 3 or more confident words (text). `--recheck-images` applies the same checks to the active catalog. |
@@ -90,7 +90,7 @@ Nightly (GitHub Actions, .github/workflows/nightly-ingest.yml):
 - **D1 `rounds`**: every served pair, its timestamp, and its choice once answered. This lets the server check answers and reject repeats.
 - **D1 `reports`**: one row per (round, image) report. `images.reports` is the running count.
 - **`public/img/`**: the image files, committed to git and deployed as static assets. A file without an `images` row is never served in a round.
-- **Browser**: only the current streak, the image IDs seen this run, the timer, and in `localStorage` the personal best and the IDs of images this device has voted on.
+- **Browser**: only the current streak, the image IDs seen this run, the timer, and in `localStorage` the personal best and the IDs of images this device has voted on and reported.
 
 ### Interaction loop
 

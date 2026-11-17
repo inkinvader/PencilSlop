@@ -6,8 +6,10 @@
 
 const MIN_VOTES_TO_SHOW = 3;   // hide crowd percentages until an image has this many votes
 const BEST_KEY = "pencilslop-best";
-const VOTED_KEY = "pencilslop-voted";   // image IDs this device has voted on (one vote each)
-const MAX_VOTED = 5000;                 // keep the list bounded
+// One vote and one report per device per image: the browser remembers the image IDs.
+const VOTED_KEY = "pencilslop-voted";
+const REPORTED_KEY = "pencilslop-reported";
+const MAX_REMEMBERED = 5000;            // keep each list bounded
 const CURTAIN_MS = 900;        // must match --curtain-ms in style.css
 const LOAD_ATTEMPTS = 3;       // pairs to try when an image fails to load
 const LOW_TIME_S = 3;          // the clock number turns red at this many seconds left
@@ -26,7 +28,8 @@ const state = {
   bonus: 0,                   // speed bonus points this run
   bestAtStart: 0,             // best when this run began; "New best!" shows once, on passing it
   pair: [],                   // image IDs of the current round [left, right]
-  voted: readVoted(),         // images this device has already voted on
+  voted: readIds(VOTED_KEY),        // images this device has already voted on
+  reported: readIds(REPORTED_KEY),  // images this device has already reported
 };
 
 buildClockTicks();
@@ -177,7 +180,7 @@ async function submit(choice) {
     roundId, choice, countLeft: !state.voted.has(leftId), countRight: !state.voted.has(rightId),
   });
   if (!res) return;
-  if (choice !== "timeout") rememberVotes(leftId, rightId);
+  if (choice !== "timeout") remember(state.voted, VOTED_KEY, leftId, rightId);
 
   showReveal("left", res.left, roundId);
   showReveal("right", res.right, roundId);
@@ -261,11 +264,18 @@ function showReveal(side, img, roundId) {
     row.append(link);
   }
 
-  // Players flag unfair images (watermark, text, wrong label); enough reports hide it.
+  // Players flag unfair images (watermark, text, wrong label); enough reports hide
+  // it. Each device can report an image once, even if it comes up again later.
+  const imageIdOnSide = state.pair[side === "left" ? 0 : 1];
   const flag = el("button", "flag", "Report image");
+  if (state.reported.has(imageIdOnSide)) {
+    flag.textContent = "Already reported";
+    flag.disabled = true;
+  }
   flag.addEventListener("click", async () => {
     flag.disabled = true;
     const ok = await api("/api/report", { roundId, side }, { quiet: true });
+    if (ok) remember(state.reported, REPORTED_KEY, imageIdOnSide);
     flag.textContent = ok ? "Reported, thanks" : "Couldn't report";
   });
   row.append(flag);
@@ -345,14 +355,14 @@ function showError(msg) {
   $("error").hidden = !msg;
 }
 
-// localStorage can throw in private windows; the game still works without it
-// (repeat votes then count, as before).
-function readVoted() {
-  try { return new Set(JSON.parse(localStorage.getItem(VOTED_KEY) || "[]")); } catch { return new Set(); }
+// Remembered image IDs (votes, reports). localStorage can throw in private
+// windows; the game still works without it (repeats then count, as before).
+function readIds(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); } catch { return new Set(); }
 }
-function rememberVotes(...ids) {
-  for (const id of ids) state.voted.add(id);
-  try { localStorage.setItem(VOTED_KEY, JSON.stringify([...state.voted].slice(-MAX_VOTED))); } catch { /* ignore */ }
+function remember(set, key, ...ids) {
+  for (const id of ids) set.add(id);
+  try { localStorage.setItem(key, JSON.stringify([...set].slice(-MAX_REMEMBERED))); } catch { /* ignore */ }
 }
 
 function readBest() {
