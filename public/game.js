@@ -12,6 +12,9 @@ const LOW_TIME_S = 3;          // the clock number turns red at this many second
 // Speed bonus for a correct answer, by time since the clock started (first match wins).
 // Points total = streak + bonus. Best is the best points total.
 const SPEED_BONUS = [{ withinMs: 500, points: 2 }, { withinMs: 1000, points: 1 }];
+// Must match the phone breakpoint in style.css: there the pieces stack, so the
+// sides are called Top and Bottom instead of Left and Right.
+const STACKED = window.matchMedia("(max-width: 700px)");
 const KEYS = { l: "left", arrowleft: "left", r: "right", arrowright: "right", b: "both", n: "neither" };
 
 const $ = (id) => document.getElementById(id);
@@ -23,6 +26,8 @@ const state = {
 };
 
 buildClockTicks();
+nameSides();
+STACKED.addEventListener("change", nameSides);
 $("best").textContent = state.best;
 $("start-btn").addEventListener("click", startRun);
 $("next-btn").addEventListener("click", () => (state.runOver ? startRun() : nextRound()));
@@ -66,7 +71,7 @@ async function nextRound() {
   for (const side of ["left", "right"]) {
     $(`${side}-cap`).replaceChildren();
     $(`${side}-piece`).classList.remove("is-ai", "is-human");
-    $(`${side}-img`).alt = `${side === "left" ? "Left" : "Right"} artwork`;
+    $(`${side}-img`).alt = `${sideName(side)} artwork`;
   }
 
   // Load the pair behind the curtains. If an image fails to load, tell the server
@@ -256,7 +261,22 @@ function el(tag, className, text) {
 }
 
 function label(choice) {
-  return { left: "Left is AI", right: "Right is AI", both: "Both", neither: "Neither" }[choice];
+  if (choice === "left" || choice === "right") return `${sideName(choice)} is AI`;
+  return { both: "Both", neither: "Neither" }[choice];
+}
+
+// "Left"/"Right" side by side; "Top"/"Bottom" when the pieces are stacked (phones).
+function sideName(side) {
+  if (STACKED.matches) return side === "left" ? "Top" : "Bottom";
+  return side === "left" ? "Left" : "Right";
+}
+
+// Label the answer plaques and the artwork descriptions for the current layout.
+function nameSides() {
+  for (const el of document.querySelectorAll("[data-side]")) el.textContent = sideName(el.dataset.side);
+  for (const side of ["left", "right"]) {
+    if (!$(`${side}-piece`).matches(".is-ai, .is-human")) $(`${side}-img`).alt = `${sideName(side)} artwork`;
+  }
 }
 
 // "/img/0123456789abcdef.jpg" -> "0123456789abcdef"

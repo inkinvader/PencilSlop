@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Top line: the logo on phones; on desktop the logo sits in the clock post instead -->
   <header class="topline">
     <img class="brand-logo" src="logo-mark.png" alt="PENCILSLOP">
   </header>
@@ -28,8 +29,9 @@
         <figcaption class="placard" id="left-cap"></figcaption>
       </figure>
 
-      <!-- Clock post: current streak above, the round clock, best streak below -->
+      <!-- Clock post: logo (desktop), current streak, the round clock, best -->
       <div class="clockpost">
+        <img class="post-logo" src="logo-mark.png" alt="PENCILSLOP">
         <div class="stat stat-streak">
           <span class="stat-label">Streak</span>
           <span class="stat-value"><strong id="streak">0</strong><span class="bonus" id="bonus" title="Speed bonus" hidden>+0</span></span>
@@ -69,10 +71,10 @@
     <!-- Console: answer plaques during a round, the result after it -->
     <div class="console">
       <div class="answers" id="answers" hidden>
-        <button class="plaque p-brass"  data-choice="left"    aria-keyshortcuts="L ArrowLeft"><span class="sym" aria-hidden="true">▲</span> Left is AI<kbd aria-hidden="true">L</kbd></button>
+        <button class="plaque p-brass"  data-choice="left"    aria-keyshortcuts="L ArrowLeft"><span class="sym" aria-hidden="true">▲</span> <span data-side="left">Left</span> is AI<kbd aria-hidden="true">L</kbd></button>
         <button class="plaque p-bronze" data-choice="both"    aria-keyshortcuts="B"><span class="sym" aria-hidden="true">◆</span> Both<kbd aria-hidden="true">B</kbd></button>
         <button class="plaque p-copper" data-choice="neither" aria-keyshortcuts="N"><span class="sym" aria-hidden="true">●</span> Neither<kbd aria-hidden="true">N</kbd></button>
-        <button class="plaque p-pewter" data-choice="right"   aria-keyshortcuts="R ArrowRight"><span class="sym" aria-hidden="true">■</span> Right is AI<kbd aria-hidden="true">R</kbd></button>
+        <button class="plaque p-pewter" data-choice="right"   aria-keyshortcuts="R ArrowRight"><span class="sym" aria-hidden="true">■</span> <span data-side="right">Right</span> is AI<kbd aria-hidden="true">R</kbd></button>
       </div>
       <div class="result" id="result" hidden>
         <p id="verdict"></p>

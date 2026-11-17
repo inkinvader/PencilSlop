@@ -25,7 +25,7 @@
   /* Sizes */
   --pad: 16px;
   --gap: 14px;
-  --top-h: 54px;
+  --top-h: 14px;               /* desktop: just a margin; the logo is in the clock post */
   --frame: 14px;              /* gold frame thickness */
   --clock-col: 120px;
   --clock: 96px;
@@ -81,7 +81,8 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 0 var(--pad);
 }
-.brand-logo { height: 50px; width: auto; display: block; }
+.brand-logo { display: none; height: 66px; width: auto; }   /* phone only */
+.post-logo { display: block; height: 75px; width: auto; }  /* desktop only */
 
 /* ---------- Gallery ---------- */
 
@@ -332,7 +333,7 @@ body {
   :root {
     --pad: 12px;
     --gap: 8px;
-    --top-h: 48px;
+    --top-h: 70px;
     --frame: 8px;
     --clock: 60px;
     --strip-h: 60px;
@@ -345,7 +346,8 @@ body {
     :root { --art-h: calc((100dvh - var(--top-h) - var(--strip-h) - var(--console-h) - 4 * var(--gap) - 2 * var(--pad) - 4 * var(--frame) - 8px) / 2); }
   }
 
-  .brand-logo { height: 44px; }
+  .brand-logo { display: block; }
+  .post-logo { display: none; }
 
   .exhibit { grid-template-columns: auto; justify-items: center; }
   .piece { gap: 6px; }
