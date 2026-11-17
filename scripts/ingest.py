@@ -595,14 +595,19 @@ def void_rounds(store, id_file):
     rounds = []
     for i in range(0, len(ids), 50):
         batch = ", ".join(sql(x) for x in ids[i:i + 50])
-        rounds += store.query(f"SELECT id, left_id, right_id, choice FROM rounds WHERE id IN ({batch}) "
+        rounds += store.query(f"SELECT id, left_id, right_id, choice, left_counted, right_counted FROM rounds WHERE id IN ({batch}) "
                               "AND choice IN ('left', 'right', 'both', 'neither')")
     # Tally per image, as the Worker counted them: judged AI for left/both (left
     # image) and right/both (right image); judged human otherwise.
     minus = {}
     for r in rounds:
-        for image_id, judged_ai in ((r["left_id"], r["choice"] in ("left", "both")),
-                                    (r["right_id"], r["choice"] in ("right", "both"))):
+        # Repeat votes from the same device were never counted, so skip them.
+        sides = []
+        if r["left_counted"]:
+            sides.append((r["left_id"], r["choice"] in ("left", "both")))
+        if r["right_counted"]:
+            sides.append((r["right_id"], r["choice"] in ("right", "both")))
+        for image_id, judged_ai in sides:
             m = minus.setdefault(image_id, {"ai": 0, "real": 0})
             m["ai" if judged_ai else "real"] += 1
     statements = [

@@ -6,6 +6,8 @@
 
 const MIN_VOTES_TO_SHOW = 3;   // hide crowd percentages until an image has this many votes
 const BEST_KEY = "pencilslop-best";
+const VOTED_KEY = "pencilslop-voted";   // image IDs this device has voted on (one vote each)
+const MAX_VOTED = 5000;                 // keep the list bounded
 const CURTAIN_MS = 900;        // must match --curtain-ms in style.css
 const LOAD_ATTEMPTS = 3;       // pairs to try when an image fails to load
 const LOW_TIME_S = 3;          // the clock number turns red at this many seconds left
@@ -23,6 +25,8 @@ const state = {
   runOver: false, busy: false, curtainsOpen: false, seen: [],
   bonus: 0,                   // speed bonus points this run
   bestAtStart: 0,             // best when this run began; "New best!" shows once, on passing it
+  pair: [],                   // image IDs of the current round [left, right]
+  voted: readVoted(),         // images this device has already voted on
 };
 
 buildClockTicks();
@@ -98,6 +102,7 @@ async function nextRound() {
   }
   state.roundId = round.roundId;
   state.seconds = round.seconds;
+  state.pair = [imageId(round.left), imageId(round.right)];
 
   // Both images are in; open the curtains, then start the clock.
   await setCurtains(true);
@@ -166,8 +171,13 @@ async function submit(choice) {
   cancelAnimationFrame(state.frameId);
   setAnswersEnabled(false);
 
-  const res = await api("/api/answer", { roundId, choice });
+  // Only this device's first vote on each image counts toward the crowd stats.
+  const [leftId, rightId] = state.pair;
+  const res = await api("/api/answer", {
+    roundId, choice, countLeft: !state.voted.has(leftId), countRight: !state.voted.has(rightId),
+  });
   if (!res) return;
+  if (choice !== "timeout") rememberVotes(leftId, rightId);
 
   showReveal("left", res.left, roundId);
   showReveal("right", res.right, roundId);
@@ -335,7 +345,16 @@ function showError(msg) {
   $("error").hidden = !msg;
 }
 
-// localStorage can throw in private windows; the game still works without it.
+// localStorage can throw in private windows; the game still works without it
+// (repeat votes then count, as before).
+function readVoted() {
+  try { return new Set(JSON.parse(localStorage.getItem(VOTED_KEY) || "[]")); } catch { return new Set(); }
+}
+function rememberVotes(...ids) {
+  for (const id of ids) state.voted.add(id);
+  try { localStorage.setItem(VOTED_KEY, JSON.stringify([...state.voted].slice(-MAX_VOTED))); } catch { /* ignore */ }
+}
+
 function readBest() {
   try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; }
 }

@@ -3,7 +3,8 @@
 // /api/* requests reach this code.
 //
 //   POST /api/round   { streak, seen } -> { roundId, left, right, seconds }   (no answer included)
-//   POST /api/answer  { roundId, choice } -> truth, credits, and prior crowd votes
+//   POST /api/answer  { roundId, choice, countLeft, countRight } -> truth, credits, prior crowd votes
+//                     (countLeft/countRight false: this device already voted on that image)
 //   POST /api/report  { roundId, side }   -> flag an image from an answered round
 //   POST /api/missing { roundId, side }   -> an image failed to load; hidden if its file is gone
 
@@ -109,6 +110,10 @@ async function answer(request, env) {
   const body = await request.json().catch(() => ({}));
   const { roundId } = body;
   let { choice } = body;
+  // One vote per device per image: the browser says which of its votes are repeats.
+  // Older pages don't send these, so a missing flag means "count it".
+  const countLeft = body.countLeft !== false;
+  const countRight = body.countRight !== false;
   if (typeof roundId !== "string" || !CHOICES.includes(choice)) {
     return json({ error: "Bad request" }, 400);
   }
@@ -123,8 +128,8 @@ async function answer(request, env) {
 
   // Mark answered only if still unanswered, so two simultaneous submissions can't both count.
   const claim = await env.DB.prepare(
-    "UPDATE rounds SET choice = ?, answered_at = ? WHERE id = ? AND choice IS NULL"
-  ).bind(choice, now, roundId).run();
+    "UPDATE rounds SET choice = ?, answered_at = ?, left_counted = ?, right_counted = ? WHERE id = ? AND choice IS NULL"
+  ).bind(choice, now, countLeft ? 1 : 0, countRight ? 1 : 0, roundId).run();
   if (claim.meta.changes === 0) return json({ error: "Round already answered" }, 409);
 
   const { results } = await env.DB.prepare(
@@ -137,11 +142,13 @@ async function answer(request, env) {
   const correctChoice =
     left.is_ai && right.is_ai ? "both" : left.is_ai ? "left" : right.is_ai ? "right" : "neither";
 
-  // A timeout casts no votes: the player didn't judge either image.
+  // A timeout casts no votes: the player didn't judge either image. A repeat vote
+  // from the same device on the same image isn't counted either.
   if (choice !== "timeout") {
-    const leftJudgedAI = choice === "left" || choice === "both";
-    const rightJudgedAI = choice === "right" || choice === "both";
-    await env.DB.batch([voteStatement(env, left.id, leftJudgedAI), voteStatement(env, right.id, rightJudgedAI)]);
+    const votes = [];
+    if (countLeft) votes.push(voteStatement(env, left.id, choice === "left" || choice === "both"));
+    if (countRight) votes.push(voteStatement(env, right.id, choice === "right" || choice === "both"));
+    if (votes.length) await env.DB.batch(votes);
   }
 
   return json({

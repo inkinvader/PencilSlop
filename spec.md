@@ -30,6 +30,7 @@ Approved for Phase 2:
 | Timer | 10 s on the client, starting once both images have loaded. The server records any answer later than 13 s after the round was served as a timeout. A timeout ends the run and casts no votes. |
 | Crowd stats | Each answer adds one vote (AI or human) per image. The reveal shows "X% of N players got it right" (for AI: share who said AI; for human: share who said human), counted from before this vote, and hides it until an image has at least 3 votes. |
 | Streak and best | Streak resets on a new run; best is stored in `localStorage` and the game still works if storage is blocked. |
+| One vote per device per image | The browser keeps the IDs of images it has voted on (`localStorage`, up to 5,000) and sends `countLeft` / `countRight: false` for repeats; the Worker then records the answer but adds no vote for that image, and stores `left_counted` / `right_counted` on the round. No device identifier is sent or stored. Missing flags (older pages) count. If storage is blocked (private windows), repeats count. Votes cast before 2026-11-17 can't be de-duplicated. |
 | Shared across devices | Two devices playing the deployed URL see each other's votes in the stats. |
 | Reports | After a round is answered, each image has a Report button. One report counts per image per round; reporting before answering is refused (409). At 3 reports an image stops being served. |
 | Catalog growth | A nightly job adds new images with no manual review, using only the fixed rules below. There is no set catalog size. |
@@ -89,7 +90,7 @@ Nightly (GitHub Actions, .github/workflows/nightly-ingest.yml):
 - **D1 `rounds`**: every served pair, its timestamp, and its choice once answered. This lets the server check answers and reject repeats.
 - **D1 `reports`**: one row per (round, image) report. `images.reports` is the running count.
 - **`public/img/`**: the image files, committed to git and deployed as static assets. A file without an `images` row is never served in a round.
-- **Browser**: only the current streak, the image IDs seen this run, the timer, and the personal best (`localStorage`).
+- **Browser**: only the current streak, the image IDs seen this run, the timer, and in `localStorage` the personal best and the IDs of images this device has voted on.
 
 ### Interaction loop
 
@@ -115,6 +116,7 @@ Play → curtains closed → `POST /api/round` with streak and seen IDs (active 
 ### Decisions and changes
 
 - **Museum redesign** (2026-11-16, Developer). Replaced the Kahoot-style look with a gallery: frames, curtains, a clock between the pieces. The pitch listed a gallery as one of its branding options.
+- **One vote per device without tracking** (2026-11-17, Developer asked for one vote per device per image). The browser remembers its own votes instead of the server storing a device ID: it's equally easy to defeat by clearing storage, but keeps the pitch's "no personal data" promise.
 - **Rule-based tiers until votes exist** (2026-11-16, Developer). The pitch planned hand-assigned tiers, but the catalog grows with no manual review, and only 8 images had 3+ votes. Tiers come from source signals instead (museum popularity flags, AI upload year as a proxy for generator quality). Phase 4 is meant to re-rank by how often each image fooled players. Trade-off: upload year is only a rough stand-in for how convincing an AI image is.
 - **Single Worker with static assets** (2026-11-09). One deploy, no separate host.
 - **Square 640 px crop for all images** (2026-11-09). The first catalog showed every AI image was square and no human one was, which gave the answer away. Trade-off: the edges of non-square works are trimmed.
