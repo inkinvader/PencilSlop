@@ -35,7 +35,7 @@ Approved for Phase 2:
 | Catalog growth | A nightly job adds new images with no manual review, using only the fixed rules below. There is no set catalog size. |
 | Fixed catalog rules | Human: AIC public-domain painting. AI: the Commons file page names a generator or carries `{{PD-algorithm}}`. Both: free license, JPEG/PNG/WebP, no more than 1.6:1 before the square crop, no "not artwork" title words. Every refused source is recorded and never fetched again. |
 | Image checks | After normalization: refused if its dHash is within 6 bits of any stored image (near-duplicate), or if Tesseract reads 3 or more confident words (text). `--recheck-images` applies the same checks to the active catalog. |
-| Logo | The full logo is on the start screen; the mark-only version is in the header and the browser tab. |
+| Logo | The logo is on the start screen, in the header beside the wordmark, and as a square icon in the browser tab. |
 | Cost | The whole system runs on free tiers with no payment method: Cloudflare Workers + D1 and GitHub Actions. |
 
 Approved for Phase 3 (2026-11-16):
@@ -100,7 +100,7 @@ Play → curtains closed → `POST /api/round` with streak and seen IDs (active 
 - Left and right answers sit at the outer ends of the plaque row (top row of the 2×2 grid on phones).
 - Reveal: a red ring and "AI-generated" label for AI, a green ring and "Human-made" for human. The label text means color is never the only cue.
 - Every image goes through the same normalization in `ingest.py`: a 640×640 centre crop, JPEG quality 82, no metadata.
-- Logo: `branding/logo.svg` (full, with wordmark) and `branding/logo-mark.svg` (mark only, for small sizes) are the masters. `public/logo.svg` and `public/logo-mark.svg` are the served copies; update both together.
+- Logo (Developer's new design, 2026-11-16): `branding/logo.png` is the master (white background, no wordmark; the page shows the name as text beside it). The served files are built from it with the background made transparent, at three sizes of the same design: `public/logo.png` (start screen), `public/logo-mark.png` (header) and `public/favicon.png` (64 px, browser tab). Rebuild all three when the master changes.
 
 ### Structure rules
 
