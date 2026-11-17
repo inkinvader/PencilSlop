@@ -41,6 +41,8 @@ Usage:
                                                           so the originals stay out of git.
   python scripts/ingest.py --remote --set-own-tool NAME   change the generator recorded for all of the
                                                           developer's own images
+  python scripts/ingest.py --remote --void-rounds FILE    remove the votes of the rounds listed in FILE
+                                                          (one round ID per line; e.g. test traffic)
   python scripts/ingest.py --remote --check-files         hide active images the site can't serve
                                                           (also runs before every ingest)
 """
@@ -584,6 +586,34 @@ def set_own_tool(store, tool):
     print(f"  {n} developer images now credit {tool} in their AI evidence")
 
 
+def void_rounds(store, id_file):
+    """Remove the votes cast by the rounds listed in `id_file` (one ID per line),
+    e.g. automated test traffic. Each round's two votes are subtracted from its
+    images and the round is marked 'void' (kept, never deleted), so running this
+    twice can't subtract twice."""
+    ids = [line.strip() for line in Path(id_file).read_text().splitlines() if line.strip()]
+    rounds = []
+    for i in range(0, len(ids), 50):
+        batch = ", ".join(sql(x) for x in ids[i:i + 50])
+        rounds += store.query(f"SELECT id, left_id, right_id, choice FROM rounds WHERE id IN ({batch}) "
+                              "AND choice IN ('left', 'right', 'both', 'neither')")
+    # Tally per image, as the Worker counted them: judged AI for left/both (left
+    # image) and right/both (right image); judged human otherwise.
+    minus = {}
+    for r in rounds:
+        for image_id, judged_ai in ((r["left_id"], r["choice"] in ("left", "both")),
+                                    (r["right_id"], r["choice"] in ("right", "both"))):
+            m = minus.setdefault(image_id, {"ai": 0, "real": 0})
+            m["ai" if judged_ai else "real"] += 1
+    statements = [
+        f"UPDATE images SET votes_ai = MAX(0, votes_ai - {m['ai']}), votes_real = MAX(0, votes_real - {m['real']}) "
+        f"WHERE id = {sql(image_id)};" for image_id, m in minus.items()
+    ] + [f"UPDATE rounds SET choice = 'void' WHERE id = {sql(r['id'])};" for r in rounds]
+    store.execute(statements)
+    votes = sum(m["ai"] + m["real"] for m in minus.values())
+    print(f"  voided {len(rounds)} of {len(ids)} listed rounds; removed {votes} votes from {len(minus)} images")
+
+
 def hide_unservable(store):
     """Hide active images that can't be shown. Remote: the live site must serve the
     file (checked over HTTP, so a local checkout that is missing new images can't
@@ -670,6 +700,7 @@ def main():
     ap.add_argument("--check-files", action="store_true", help="hide active images the site can't serve")
     ap.add_argument("--add-own", metavar="DIR", help="add the developer's own AI images from DIR")
     ap.add_argument("--set-own-tool", metavar="NAME", help="generator recorded for the developer's own images")
+    ap.add_argument("--void-rounds", metavar="FILE", help="remove the votes of the round IDs listed in FILE")
     ap.add_argument("--tool", default="an unnamed AI generator", help="generator used for --add-own")
     args = ap.parse_args()
 
@@ -687,6 +718,8 @@ def main():
         retier(store)
     elif args.check_files:
         hide_unservable(store)
+    elif args.void_rounds:
+        void_rounds(store, args.void_rounds)
     elif args.set_own_tool:
         set_own_tool(store, args.set_own_tool)
     elif args.add_own:
