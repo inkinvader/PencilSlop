@@ -14,10 +14,10 @@ on:
     inputs:
       human:
         description: "New human artworks to add"
-        default: "10"
+        default: "20"
       ai:
         description: "New AI images to add"
-        default: "5"
+        default: "15"
 
 permissions:
   contents: write              # the job commits new images to the repository
@@ -58,6 +58,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Inputs pass through env (not inlined into the command) so they can't inject shell code.
-          HUMAN: ${{ github.event.inputs.human || '10' }}
-          AI: ${{ github.event.inputs.ai || '5' }}
+          HUMAN: ${{ github.event.inputs.human || '20' }}
+          AI: ${{ github.event.inputs.ai || '15' }}
         run: python scripts/ingest.py --remote --human "$HUMAN" --ai "$AI"

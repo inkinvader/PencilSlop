@@ -50,6 +50,6 @@ PENCILSLOP: a web game where players judge which of two artworks is AI-generated
 - **Ingest prerequisites**: Python with `pip install -r scripts/requirements.txt`, plus the Tesseract program (Windows: `winget install UB-Mannheim.TesseractOCR`).
 - **Deploy**: `npm run deploy` (runs `git pull` first, because the nightly job commits images).
 - **Migrations**: after `npm run db:migrate:remote`, confirm with `npx wrangler d1 migrations list pencilslop --remote`. One remote apply once reported nothing and didn't apply.
-- **Catalog**: only through `scripts/ingest.py` (see its docstring). The nightly GitHub Actions workflow runs `--remote --human 10 --ai 5`. Hide a bad image with `--remote --reject ID "reason"`.
+- **Catalog**: only through `scripts/ingest.py` (see its docstring). The nightly GitHub Actions workflow runs `--remote --human 20 --ai 15` (Developer, 2026-11-17). Hide a bad image with `--remote --reject ID "reason"`.
 - **Schema**: add a new file in `migrations/` and apply it with `--local`, then `--remote`.
 - **Cost**: free tiers only, no paid services (Developer constraint).
