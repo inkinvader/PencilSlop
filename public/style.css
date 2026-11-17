@@ -25,12 +25,12 @@
   /* Sizes */
   --pad: 16px;
   --gap: 14px;
-  --top-h: 44px;
+  --top-h: 54px;
   --frame: 14px;              /* gold frame thickness */
   --clock-col: 120px;
   --clock: 96px;
   --placard-h: 120px;               /* fits its 5 lines: tag, title, artist, votes, links */
-  --console-h: 64px;
+  --console-h: 54px;             /* plaques are 52 px tall */
   --curtain-ms: 900ms;        /* must match CURTAIN_MS in game.js */
 
   /* Artwork side: limited by width (two frames + clock column) and by height. */
@@ -81,10 +81,7 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 0 var(--pad);
 }
-.brand-logo { height: 42px; width: auto; display: block; }   /* fills the top line */
-.wordmark { font-family: var(--serif); font-weight: 700; font-size: 1.3rem; letter-spacing: 0.22em; }
-.pencil { color: var(--gold-dark); }
-.slop { color: var(--velvet); }
+.brand-logo { height: 50px; width: auto; display: block; }
 
 /* ---------- Gallery ---------- */
 
@@ -335,10 +332,10 @@ body {
   :root {
     --pad: 12px;
     --gap: 8px;
-    --top-h: 40px;
+    --top-h: 48px;
     --frame: 8px;
     --clock: 60px;
-    --strip-h: 64px;
+    --strip-h: 60px;
     --console-h: 100px;                 /* 2 × 2 plaques */
     --art-w: calc(100vw - 2 * var(--pad) - 2 * var(--frame));
     --art-h: calc((100vh - var(--top-h) - var(--strip-h) - var(--console-h) - 4 * var(--gap) - 2 * var(--pad) - 4 * var(--frame) - 8px) / 2);
@@ -348,8 +345,7 @@ body {
     :root { --art-h: calc((100dvh - var(--top-h) - var(--strip-h) - var(--console-h) - 4 * var(--gap) - 2 * var(--pad) - 4 * var(--frame) - 8px) / 2); }
   }
 
-  .brand-logo { height: 38px; }
-  .wordmark { font-size: 1.1rem; }
+  .brand-logo { height: 44px; }
 
   .exhibit { grid-template-columns: auto; justify-items: center; }
   .piece { gap: 6px; }

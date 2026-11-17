@@ -35,7 +35,7 @@ Approved for Phase 2:
 | Catalog growth | A nightly job adds new images with no manual review, using only the fixed rules below. There is no set catalog size. |
 | Fixed catalog rules | Human: AIC public-domain painting. AI: the Commons file page names a generator or carries `{{PD-algorithm}}`. Both: free license, JPEG/PNG/WebP, no more than 1.6:1 before the square crop, no "not artwork" title words. Every refused source is recorded and never fetched again. |
 | Image checks | After normalization: refused if its dHash is within 6 bits of any stored image (near-duplicate), or if Tesseract reads 3 or more confident words (text). `--recheck-images` applies the same checks to the active catalog. |
-| Logo | The logo is on the start screen, in the header beside the wordmark, and as a square icon in the browser tab. |
+| Logo | The logo is on the start screen, alone in the header (no text), and as a square icon in the browser tab. |
 | Cost | The whole system runs on free tiers with no payment method: Cloudflare Workers + D1 and GitHub Actions. |
 
 Approved for Phase 3 (2026-11-16):
@@ -95,7 +95,7 @@ Play → curtains closed → `POST /api/round` with streak and seen IDs (active 
 
 ### Visual and content rules
 
-- Museum gallery look with the art first (2026-11-16, replaces the Phase 2 quiz-show look). Layout is a column: top line (logo mark, wordmark), then the exhibit (frame, clock post, frame), then the console (answer plaques during a round, result after it). The layout model is described at the top of `public/style.css`; every artwork is a square of side `--art`.
+- Museum gallery look with the art first (2026-11-16, replaces the Phase 2 quiz-show look). Layout is a column: top line (logo only), then the exhibit (frame, clock post, frame), then the console (answer plaques during a round, result after it). The layout model is described at the top of `public/style.css`; every artwork is a square of side `--art`.
 - Colors and sizes are tokens in `public/style.css` (`--wall`, `--ink`, `--gold`, `--velvet`, `--ai`, `--human`, ...).
 - Left and right answers sit at the outer ends of the plaque row (top row of the 2×2 grid on phones).
 - Reveal: a red ring and "AI-generated" label for AI, a green ring and "Human-made" for human. The label text means color is never the only cue.
