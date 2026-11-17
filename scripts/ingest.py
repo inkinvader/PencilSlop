@@ -43,6 +43,8 @@ Usage:
                                                           developer's own images
   python scripts/ingest.py --remote --void-rounds FILE    remove the votes of the rounds listed in FILE
                                                           (one round ID per line; e.g. test traffic)
+  python scripts/ingest.py --remote --find-robots         list active AI images with a robot/machine
+                                                          subject (read-only; hide with --reject)
   python scripts/ingest.py --remote --check-files         hide active images the site can't serve
                                                           (also runs before every ingest)
 """
@@ -299,6 +301,15 @@ AI_TOOLS = re.compile(
 )
 PD_ALGORITHM = re.compile(r"\{\{\s*PD-algorithm", re.I)
 
+# Robot and machine subjects give the answer away (Developer, 2026-11-17: "way too
+# obvious"). Checked against the title and the file page text (description and
+# categories). "bot" alone is left out: descriptions often mention "Midjourney Bot".
+ROBOT_SUBJECT = re.compile(
+    r"\b(robot\w*|androids?|cyborgs?|droids?|mecha|mechanical|automat(on|a)|humanoids?|"
+    r"exoskeleton|steampunk|clockwork|cybernetic\w*|cyberpunk|codexbot)\b",
+    re.I,
+)
+
 
 def ai_evidence(wikitext):
     """Return a description of the explicit AI evidence on a file page, or None."""
@@ -366,6 +377,7 @@ def ai_entry(page):
         "license": f"{license_name}, via Wikimedia Commons",
         "ai_evidence": ai_evidence(wikitext_of(page)),
         "tier": ai_tier(info["timestamp"]),
+        "robot_words": robot_words(title, wikitext_of(page)),
         "download_url": info.get("thumburl") or info["url"],
     }
     if entry["ai_evidence"] is None:
@@ -374,7 +386,22 @@ def ai_entry(page):
         entry["rule_failure"] = f"License not free: {license_name or 'unknown'}"
     elif info["mime"] not in ("image/jpeg", "image/png", "image/webp"):
         entry["rule_failure"] = f"Unsupported file type {info['mime']}"
+    elif entry["robot_words"]:
+        entry["rule_failure"] = "Robot or machine subject (too easy): " + ", ".join(entry["robot_words"])
+    del entry["robot_words"]
     return entry
+
+
+# "Machine" is checked in the title only: page text often says "machine-generated"
+# or "machine learning" about how the image was made, not what it shows.
+MACHINE_TITLE = re.compile(r"\bmachines?\b", re.I)
+
+
+def robot_words(title, wikitext):
+    """Robot/machine words found in a file's title or page text, lowercased."""
+    words = {m.group(0).lower() for m in ROBOT_SUBJECT.finditer(f"{title}\n{wikitext}")}
+    words |= {m.group(0).lower() for m in MACHINE_TITLE.finditer(title)}
+    return sorted(words)
 
 
 # --------------------------------------------------------------------------
@@ -619,6 +646,26 @@ def void_rounds(store, id_file):
     print(f"  voided {len(rounds)} of {len(ids)} listed rounds; removed {votes} votes from {len(minus)} images")
 
 
+def find_robots(store):
+    """List active Commons AI images whose title or file page names a robot or
+    machine subject. Read-only: hide chosen ones with --reject."""
+    rows = store.query("SELECT id, title, source_url FROM images WHERE active = 1 AND is_ai = 1 "
+                       "AND source_url LIKE '%commons.wikimedia.org%'")
+    found = 0
+    for i in range(0, len(rows), 50):
+        batch = {"File:" + urllib.parse.unquote(r["source_url"].split("/File:")[1]).replace("_", " "): r
+                 for r in rows[i:i + 50]}
+        data = commons_query(titles="|".join(batch), prop="revisions", rvprop="content", rvslots="main")
+        renamed = {n["to"]: n["from"] for n in data["query"].get("normalized", [])}
+        for page in data["query"]["pages"].values():
+            row = batch.get(renamed.get(page["title"], page["title"]))
+            words = row and robot_words(row["title"], wikitext_of(page))
+            if words:
+                found += 1
+                print(f"  {row['id']}  {row['title'][:60]}  [{', '.join(words)}]")
+    print(f"  {found} of {len(rows)} active Commons AI images match")
+
+
 def hide_unservable(store):
     """Hide active images that can't be shown. Remote: the live site must serve the
     file (checked over HTTP, so a local checkout that is missing new images can't
@@ -706,6 +753,7 @@ def main():
     ap.add_argument("--add-own", metavar="DIR", help="add the developer's own AI images from DIR")
     ap.add_argument("--set-own-tool", metavar="NAME", help="generator recorded for the developer's own images")
     ap.add_argument("--void-rounds", metavar="FILE", help="remove the votes of the round IDs listed in FILE")
+    ap.add_argument("--find-robots", action="store_true", help="list active AI images with a robot subject")
     ap.add_argument("--tool", default="an unnamed AI generator", help="generator used for --add-own")
     args = ap.parse_args()
 
@@ -723,6 +771,8 @@ def main():
         retier(store)
     elif args.check_files:
         hide_unservable(store)
+    elif args.find_robots:
+        find_robots(store)
     elif args.void_rounds:
         void_rounds(store, args.void_rounds)
     elif args.set_own_tool:
