@@ -281,7 +281,7 @@ function el(tag, className, text) {
 
 function label(choice) {
   if (choice === "left" || choice === "right") return `${sideName(choice)} is AI`;
-  return { both: "Both", neither: "Neither" }[choice];
+  return { both: "Both are AI", neither: "Neither are AI" }[choice];
 }
 
 // "Left"/"Right" side by side; "Top"/"Bottom" when the pieces are stacked (phones).
