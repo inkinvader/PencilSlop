@@ -218,29 +218,38 @@ function showBonus(earned) {
   badge.classList.add("pop");
 }
 
-// Museum wall label under each frame: verdict, title, artist, crowd votes, credit, report.
+// Museum wall label under each frame. Human works: verdict, title, artist, crowd
+// result, source link. AI images: verdict and crowd result only, plus a License
+// link when the server sends one (licenses that require attribution).
 function showReveal(side, img, roundId) {
   $(`${side}-piece`).classList.add(img.isAI ? "is-ai" : "is-human");
-  $(`${side}-img`).alt = `${img.title}, ${img.artist}`;
+  $(`${side}-img`).alt = img.isAI ? `AI-generated image (${sideName(side).toLowerCase()})` : `${img.title}, ${img.artist}`;
   const cap = $(`${side}-cap`);
   cap.replaceChildren();
 
   cap.append(el("span", "verdict-tag", img.isAI ? "AI-generated" : "Human-made"));
-  cap.append(el("span", "art-title", img.title));
-  cap.append(el("span", "art-artist", img.artist));
+  if (!img.isAI) {
+    cap.append(el("span", "art-title", img.title));
+    cap.append(el("span", "art-artist", img.artist));
+  }
 
+  // Share of earlier players who judged this image correctly.
   const total = img.votesAI + img.votesReal;
+  const right = img.isAI ? img.votesAI : img.votesReal;
   cap.append(el("span", "art-votes",
     total >= MIN_VOTES_TO_SHOW
-      ? `${Math.round((img.votesAI / total) * 100)}% of ${total} earlier players said AI`
+      ? `${Math.round((right / total) * 100)}% of ${total} players got it right`
       : "Not enough votes yet"));
 
   const row = el("span", "placard-row");
-  const link = el("a", "", "Source");
-  link.href = img.sourceUrl;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.setAttribute("aria-label", `Source and license for ${img.title}`);
+  if (img.sourceUrl) {
+    const link = el("a", "", img.isAI ? "License" : "Source");
+    link.href = img.sourceUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.setAttribute("aria-label", img.isAI ? `Image source and license (${img.license})` : `Source and license for ${img.title}`);
+    row.append(link);
+  }
 
   // Players flag unfair images (watermark, text, wrong label); enough reports hide it.
   const flag = el("button", "flag", "Report image");
@@ -249,7 +258,7 @@ function showReveal(side, img, roundId) {
     const ok = await api("/api/report", { roundId, side }, { quiet: true });
     flag.textContent = ok ? "Reported, thanks" : "Couldn't report";
   });
-  row.append(link, flag);
+  row.append(flag);
   cap.append(row);
 }
 

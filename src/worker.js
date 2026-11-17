@@ -201,17 +201,21 @@ function voteStatement(env, id, judgedAI) {
   return env.DB.prepare(`UPDATE images SET ${column} = ${column} + 1 WHERE id = ?`).bind(id);
 }
 
+// What the reveal shows. Human works are credited in full. AI images are not
+// credited (Developer, 2026-11-17), except that a license requiring attribution
+// (CC BY, CC BY-SA) still gets its source link.
+const ATTRIBUTION_REQUIRED = /\bCC BY\b/i;
+
 function reveal(img) {
-  return {
+  const shown = {
     isAI: img.is_ai === 1,
-    title: img.title,
-    artist: img.artist,
-    sourceUrl: img.source_url,
-    license: img.license,
-    aiEvidence: img.ai_evidence,
     votesAI: img.votes_ai,
     votesReal: img.votes_real,
   };
+  if (!shown.isAI || ATTRIBUTION_REQUIRED.test(img.license)) {
+    Object.assign(shown, { title: img.title, artist: img.artist, sourceUrl: img.source_url, license: img.license });
+  }
+  return shown;
 }
 
 function json(data, status = 200) {
