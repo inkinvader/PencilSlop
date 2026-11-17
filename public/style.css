@@ -81,7 +81,6 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 0 var(--pad);
 }
-.brand-logo { display: none; height: 66px; width: auto; }   /* phone only */
 .post-logo { display: block; height: 75px; width: auto; }  /* desktop only */
 
 /* ---------- Gallery ---------- */
@@ -330,52 +329,58 @@ body {
 /* ---------- Phones: stacked exhibit ---------- */
 
 @media (max-width: 700px) {
+  /* Phone layout, top to bottom: logo + streak | clock | best row, top piece,
+     answer plaques, bottom piece. The exhibit's box is dissolved (display:
+     contents) so its children and the console can be reordered in one column. */
   :root {
     --pad: 12px;
     --gap: 8px;
-    --top-h: 70px;
+    --top-h: 0px;                       /* no separate top line */
     --frame: 8px;
-    --clock: 60px;
-    --strip-h: 60px;
-    --console-h: 100px;                 /* 2 × 2 plaques */
+    --clock: 52px;
+    --strip-h: 56px;
+    --console-h: 94px;                  /* 2 rows of 44 px plaques + gap */
     --art-w: calc(100vw - 2 * var(--pad) - 2 * var(--frame));
-    --art-h: calc((100vh - var(--top-h) - var(--strip-h) - var(--console-h) - 4 * var(--gap) - 2 * var(--pad) - 4 * var(--frame) - 8px) / 2);
+    --art-h: calc((100vh - var(--strip-h) - var(--console-h) - 3 * var(--gap) - 20px - 4 * var(--frame) - 4px) / 2);
     --art: max(140px, min(var(--art-w), var(--art-h)));
   }
   @supports (height: 100dvh) {
-    :root { --art-h: calc((100dvh - var(--top-h) - var(--strip-h) - var(--console-h) - 4 * var(--gap) - 2 * var(--pad) - 4 * var(--frame) - 8px) / 2); }
+    :root { --art-h: calc((100dvh - var(--strip-h) - var(--console-h) - 3 * var(--gap) - 20px - 4 * var(--frame) - 4px) / 2); }
   }
 
-  .brand-logo { display: block; }
-  .post-logo { display: none; }
+  .topline { display: none; }
+  .gallery { position: relative; padding: 8px var(--pad) 12px; }
+  .exhibit { display: contents; }
+  .clockpost { order: 0; }
+  #left-piece { order: 1; }
+  .console { order: 2; }
+  #right-piece { order: 3; }
+  #announce, #error { order: 4; }
 
-  .exhibit { grid-template-columns: auto; justify-items: center; }
   .piece { gap: 6px; }
   .piece::before { display: none; }
 
-  /* Clock strip between the frames: streak | clock | best */
-  .clockpost { height: var(--strip-h); flex-direction: row; gap: 28px; }
-  .stat { min-width: 64px; }
-  .stat strong { font-size: 1.4rem; }
+  /* Top row: logo, streak, clock, best */
+  .clockpost { height: var(--strip-h); flex-direction: row; gap: 16px; }
+  .post-logo { height: 40px; }
+  .stat { min-width: 56px; }
+  .stat-label { font-size: 0.66rem; }
+  .stat strong { font-size: 1.25rem; }
 
   /* Labels take no room during a round; after the reveal the page may scroll. */
   .placard { height: auto; }
   .placard:empty { display: none; }
 
-  /* The console stays reachable at the bottom while the reveal is scrolled. */
-  .console {
-    position: sticky; bottom: 0; z-index: 4;
-    padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
-    background: rgba(239, 234, 225, 0.95);
-    border-top: 1px solid #d8cfbf;
-    box-shadow: 0 -6px 14px rgba(60, 40, 20, 0.1);
-  }
-  .answers { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .plaque { font-size: 0.92rem; padding: 6px 10px; min-height: 46px; }
+  /* Answers between the two pieces, as wide as a frame */
+  .console { width: calc(var(--art) + 2 * var(--frame)); }
+  .answers { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .plaque { font-size: 0.82rem; padding: 4px 8px; min-height: 44px; letter-spacing: 0.04em; }
+  .plaque kbd { display: none; }
   [data-choice="left"] { order: 1; } [data-choice="right"] { order: 2; }
   [data-choice="both"] { order: 3; } [data-choice="neither"] { order: 4; }
   .result { gap: 10px; }
-  #verdict { font-size: 1rem; }
+  #verdict { font-size: 0.95rem; }
+  .brass-btn { padding: 8px 26px; font-size: 1rem; }
 
   .intro { padding: 16px 18px 20px; }
   .intro h1 { font-size: 1.6rem; }
